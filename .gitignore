@@ -4,6 +4,5 @@ __pycache__
 *.zip
 *.pkl
 *.hd5
-*.csv
 *.zip
 *.wav
