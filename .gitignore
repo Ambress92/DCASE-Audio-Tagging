@@ -1,0 +1,9 @@
+.idea
+*.pyc
+__pycache__
+*.zip
+*.pkl
+*.hd5
+*.csv
+*.zip
+*.wav
