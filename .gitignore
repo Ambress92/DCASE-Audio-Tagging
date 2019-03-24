@@ -6,3 +6,4 @@ __pycache__
 *.hd5
 *.zip
 *.wav
+*.mfcc
