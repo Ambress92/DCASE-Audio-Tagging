@@ -21,33 +21,33 @@ def get_unverified_files_dict(year):
 
     return unverified_files_dict
 
-def load_verified_files(year, load_features=False):
+def load_verified_files(year, features=None):
     verified_files_dict = get_verified_files_dict(year)
 
     # load verified audio clips
     verified_files = []
     for file, label in tqdm.tqdm(zip(verified_files_dict.keys(), verified_files_dict.values()), 'Loading verified clips'):
-        if not load_features:
+        if not features:
             _, data = wavfile.read('../datasets/{}/audio_train/{}'.format(year, file))
         else:
-            with open('../features/{}/mfcc/{}'.format(year, file), 'r') as in_file:
+            with open('../features/{}/{}/{}'.format(year, features, file.replace('wav', features)), 'r') as in_file:
                 data = yaml.load(in_file)
 
         verified_files.append((data, label))
 
     return verified_files
 
-def load_unverified_files(year, load_features=False):
+def load_unverified_files(year, features=None):
     unverified_files_dict = get_unverified_files_dict(year)
 
     # load verified audio clips
     unverified_files = []
     for file, label in tqdm.tqdm(zip(unverified_files_dict.keys(), unverified_files_dict.values()),
                                  'Loading verified clips'):
-        if not load_features:
+        if not features:
             _, data = wavfile.read('../datasets/{}/audio_train/{}'.format(year, file))
         else:
-            with open('../features/{}/mfcc/{}'.format(year, file), 'r') as in_file:
+            with open('../features/{}/{}/{}'.format(year, features, file.replace('wav', features)), 'r') as in_file:
                 data = yaml.load(in_file)
 
         unverified_files.append((data, label))
