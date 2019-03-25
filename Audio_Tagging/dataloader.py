@@ -60,3 +60,8 @@ def get_label_mapping(year):
     label_mapping = {label: index for index, label in enumerate(labels)}
     inv_label_mapping = {v: k for k, v in zip(label_mapping.keys(), label_mapping.values())}
     return label_mapping, inv_label_mapping
+
+def one_hot_encode(label, num_classes):
+    encoding = np.zeros((num_classes))
+    encoding[label] = 1
+    return encoding

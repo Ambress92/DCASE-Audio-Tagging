@@ -22,12 +22,25 @@ def dump_cqt_specs():
             yaml.dump(spec, out_file)
 
 def dump_mel_specs():
+    n_fft = 1024
+    sr = 32000
+    n_mels = 128
+    hop_length = 192
+    fmax = None
+
     files = os.listdir('../datasets/{}/audio_train'.format(args.year))
 
     for file in tqdm.tqdm(files, 'Extracting mel spectrograms'):
-        sr, data = wavfile.read('../datasets/{}/audio_train/{}'.format(args.year, file))
+        data, sr = librosa.load('../datasets/{}/audio_train/{}'.format(args.year, file), sr=sr, mono=True)
 
-        spec = librosa.feature.melspectrogram(data.astype(np.float), sr)
+
+        stft = librosa.stft(data, n_fft=n_fft, hop_length=hop_length, win_length=None, window='hann', center=True,
+                            pad_mode='reflect')
+
+        stft = np.abs(stft)
+        stft = np.log10(stft+1)
+        spec = librosa.feature.melspectrogram(S=stft, sr=sr, n_mels=n_mels, fmax=fmax)
+
 
         with open('../features/{}/mel/{}.mel'.format(args.year, file.split('.')[0]), 'w') as out_file:
             yaml.dump(spec, out_file)
@@ -47,9 +60,9 @@ def dump_mfcc_features():
 
 
 def main():
-    dump_mfcc_features()
+    # dump_mfcc_features()
     # dump_cqt_specs()
-   # dump_mel_specs()
+    dump_mel_specs()
 
 if __name__ == '__main__':
     main()
