@@ -15,22 +15,10 @@ def main():
 
     data = []
     filelist = os.listdir('features/{}/{}'.format(args.year, args.features))
-    if args.features == 'mfcc':
-        # load mfcc features
-        for file in filelist:
-            with open('features/{}/{}/{}'.format(args.year, args.features, file)) as in_file:
-                data.append(yaml.load(in_file))
-    elif args.features == 'cqt':
-        # load cqt spectrograms
-        for file in filelist:
-            with open('features/{}/{}/{}'.format(args.year, args.features, file)) as in_file:
-                data.append(yaml.load(in_file))
-    else:
-        args.features == 'mel':
-        # load mel spectrograms
-        for file in filelist:
-            with open('features/{}/{}/{}'.format(args.year, args.features, file)) as in_file:
-                data.append(yaml.load(in_file))
+    print('loading features ...')
+    for file in filelist:
+        with open('features/{}/{}/{}'.format(args.year, args.features, file)) as in_file:
+            data.append(yaml.load(in_file))
 
     if args.clf == 'RF':
         pass
