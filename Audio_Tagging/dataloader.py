@@ -54,8 +54,8 @@ def load_unverified_files(year, load_features=False):
 
     return unverified_files
 
-def get_label_mapping():
-    verified_files_dict = get_verified_files_dict()
+def get_label_mapping(year):
+    verified_files_dict = get_verified_files_dict(year)
     labels = np.unique(list(verified_files_dict.values()))
     label_mapping = {label: index for index, label in enumerate(labels)}
     inv_label_mapping = {v: k for k, v in zip(label_mapping.keys(), label_mapping.values())}
