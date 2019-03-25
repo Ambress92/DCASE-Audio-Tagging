@@ -38,7 +38,7 @@ def dump_mfcc_features():
     for file in tqdm.tqdm(files, 'Extracting mfccs'):
         sr, data = wavfile.read('../datasets/{}/audio_train/{}'.format(args.year, file))
 
-        mfcc = librosa.feature.mfcc(data, sr, n_mfcc=40)
+        mfcc = librosa.feature.mfcc(data.astype(np.float), sr, n_mfcc=40)
         #deltas = librosa.feature.delta(data)
         #delta_delta = librosa.feature.delta(data, order=2)
 
@@ -47,9 +47,9 @@ def dump_mfcc_features():
 
 
 def main():
-    # dump_mfcc_features()
+    dump_mfcc_features()
     # dump_cqt_specs()
-    dump_mel_specs()
+   # dump_mel_specs()
 
 if __name__ == '__main__':
     main()
