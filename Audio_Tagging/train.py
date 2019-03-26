@@ -45,7 +45,7 @@ def main():
         
         print('beginning SVM')
         
-        clf = SVC(C=1.0, kernel='rbf',verbose=True,max_iter=20)
+        clf = SVC(C=1.0, kernel='rbf', verbose=True, max_iter=20)
         clf.fit(X,y)
         params = clf.get_params()
         
