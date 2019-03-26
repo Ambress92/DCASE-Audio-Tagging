@@ -54,7 +54,7 @@ def load_verified_files(year, features=None):
         if not features:
             _, data = wavfile.read('../datasets/{}/audio_train/{}'.format(year, file))
         else:
-            with open('../features/{}/{}/{}'.format(year, features, file.replace('wav', features)), 'r') as in_file:
+            with open('../features/{}/{}/audio_train/{}'.format(year, features, file.replace('wav', features)), 'r') as in_file:
                 data = yaml.load(in_file)
 
         verified_files.append((data, label))
@@ -71,7 +71,7 @@ def load_unverified_files(year, features=None):
         if not features:
             _, data = wavfile.read('../datasets/{}/audio_train/{}'.format(year, file))
         else:
-            with open('../features/{}/{}/{}'.format(year, features, file.replace('wav', features)), 'r') as in_file:
+            with open('../features/{}/{}/audio_train/{}'.format(year, features, file.replace('wav', features)), 'r') as in_file:
                 data = yaml.load(in_file)
 
         unverified_files.append((data, label))
@@ -104,10 +104,10 @@ def load_test_files(year, features=None):
         if not features:
             _, data = wavfile.read('../datasets/{}/audio_test/{}'.format(year, file))
         else:
-            if not os.path.exists('../features/test/{}/{}'.format(year, features)):
+            if not os.path.exists('../features/{}/{}/audio_test'.format(year, features)):
                 print('\nPlease extract features prior to loading!\n')
                 return
-            with open('../features/test/{}/{}/{}'.format(year, features, file.replace('wav', features)), 'r') as in_file:
+            with open('../features/{}/{}/audio_test/{}'.format(year, features, file.replace('wav', features)), 'r') as in_file:
                 data = yaml.load(in_file)
 
         test_files.append((data, label))
