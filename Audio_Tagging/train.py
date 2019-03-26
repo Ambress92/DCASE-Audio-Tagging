@@ -26,7 +26,7 @@ def main():
             y.append(label_mapping[label])
 
     if args.clf == 'RF':
-        clf = RandomForestClassifier(n_estimators=100, verbose=1)
+        clf = RandomForestClassifier(n_estimators=100, verbose=1, n_jobs=-2)
         clf.fit(X, y)
         params = clf.get_params()
 
