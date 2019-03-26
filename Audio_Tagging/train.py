@@ -1,5 +1,6 @@
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
+import os
 import argparse
 from dataloader import get_verified_files_dict, load_verified_files, get_label_mapping, one_hot_encode
 import yaml
@@ -41,7 +42,10 @@ def main():
             yaml.dump(params, out_file)
 
     elif args.clf == 'SVM':
-        clf = SVC(C=1.0, kernel='rbf')
+        
+        print('beginning SVM')
+        
+        clf = SVC(C=1.0, kernel='rbf',verbose=True,max_iter=20)
         clf.fit(X,y)
         params = clf.get_params()
         
