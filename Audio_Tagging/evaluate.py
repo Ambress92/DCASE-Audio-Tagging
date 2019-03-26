@@ -78,13 +78,13 @@ def main():
 
     # reconstruct models and classify test clips
     if args.clf == 'RF':
-        with open('models/RF_verified.yml', 'r') as in_file:
+        with open('../models/RF_verified.yml', 'r') as in_file:
             params = yaml.load(in_file)
         clf = RandomForestClassifier()
         clf.set_params(params)
         predictions = clf.predict_proba(X)
     elif args.clf == 'SVM':
-        with open('models/SVM_verified.yml', 'r') as in_file:
+        with open('../models/SVM_verified.yml', 'r') as in_file:
             params = yaml.load(in_file)
         clf = SVC()
         clf.set_params(params)

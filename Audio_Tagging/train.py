@@ -29,32 +29,32 @@ def main():
             y.append(label_mapping[label])
 
     print('Load complete')
-    
+
     if args.clf == 'RF':
-        clf = RandomForestClassifier(n_estimators=100, verbose=1)
+        clf = RandomForestClassifier(n_estimators=20, verbose=2, max_depth=200)
         clf.fit(X, y)
         params = clf.get_params()
-        
+
         if not os.path.exists('../models'):
             os.makedirs('../models')
-        
-        with open('models/RF_verified.yml', 'w') as out_file:
+
+        with open('../models/RF_verified.yml', 'w') as out_file:
             yaml.dump(params, out_file)
 
     elif args.clf == 'SVM':
-        
+
         print('beginning SVM')
-        
-        clf = SVC(C=1.0, kernel='rbf', verbose=True, max_iter=20)
+
+        clf = SVC(C=1.0, kernel='rbf', verbose=True, max_iter=50, probability=True)
         clf.fit(X,y)
         params = clf.get_params()
-        
+
         if not os.path.exists('../models'):
             os.makedirs('../models')
-        
-        with open('models/SVM_verified.yml', 'w') as out_file:
+
+        with open('../models/SVM_verified.yml', 'w') as out_file:
             yaml.dump(params, out_file)
-        
+
     else:
         pass
 
