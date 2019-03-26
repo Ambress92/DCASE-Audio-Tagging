@@ -8,9 +8,16 @@ import numpy as np
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-year', required=True)
+parser.add_argument('--mfcc', action='store_true')
+parser.add_argument('--cqt', action='store_true')
+parser.add_argument('--melspectrogram', action='store_true')
 args = parser.parse_args()
 
 def dump_cqt_specs():
+    """
+    Computes constant Q-transform and dumps results into according directory.
+    """
+
     files = os.listdir('../datasets/{}/audio_train'.format(args.year))
 
     for file in tqdm.tqdm(files, 'Extracting stft features'):
@@ -22,6 +29,10 @@ def dump_cqt_specs():
             yaml.dump(spec, out_file)
 
 def dump_mel_specs():
+    """
+    Computes Mel-scaled spectrogram and dumps results into according directory.
+    """
+
     n_fft = 1024
     sr = 32000
     n_mels = 128
@@ -46,6 +57,10 @@ def dump_mel_specs():
             yaml.dump(spec, out_file)
 
 def dump_mfcc_features():
+    """
+    Computes MFCCs and dumps features into according directory.
+    """
+
     files = os.listdir('../datasets/{}/audio_train'.format(args.year))
 
     for file in tqdm.tqdm(files, 'Extracting mfccs'):
@@ -60,9 +75,18 @@ def dump_mfcc_features():
 
 
 def main():
-    # dump_mfcc_features()
-    # dump_cqt_specs()
-    dump_mel_specs()
+    if args.mfcc:
+        if not os.path.exists('../features/{}/mfcc'.format(args.year)):
+            os.makedirs('../features/{}/mfcc'.format(args.year))
+        dump_mfcc_features()
+    if args.melspectrogram:
+        if not os.path.exists('../features/{}/mel'.format(args.year)):
+            os.makedirs('../features/{}/mel'.format(args.year))
+        dump_mel_specs()
+    if args.cqt:
+        if not os.path.exists('../features/{}/cqt'.format(args.year)):
+            os.makedirs('../features/{}/cqt'.format(args.year))
+        dump_cqt_specs()
 
 if __name__ == '__main__':
     main()
