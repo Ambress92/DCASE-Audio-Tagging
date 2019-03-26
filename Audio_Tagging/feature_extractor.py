@@ -11,6 +11,7 @@ parser.add_argument('-year', required=True)
 parser.add_argument('--test', action='store_true')
 parser.add_argument('--mfcc', action='store_true')
 parser.add_argument('--cqt', action='store_true')
+parser.add_argument('--centroids', action='store_true')
 parser.add_argument('--melspectrogram', action='store_true')
 args = parser.parse_args()
 
@@ -104,6 +105,33 @@ def dump_mfcc_features(use_train):
         with open('../features/{}/mfcc/{}/{}.mfcc'.format(args.year, dirname, file.split('.')[0]), 'w') as out_file:
            yaml.dump(mfcc.T, out_file)
 
+def dump_spectral_centroids(use_train):
+    """
+    Computes spectral centroid of audio samples and dumps results
+    into according directory.
+
+    Parameters
+    ----------
+    use_train : boolean
+        `True` if we want to compute spectral centroids for training audio clips.
+        `False` if we want to compute spectral centroids to test clips.
+    """
+
+    dirname = 'audio_test'
+    if use_train:
+        dirname = 'audio_train'
+
+    files = os.listdir('../datasets/{}/{}'.format(args.year, dirname))
+
+    for file in tqdm.tqdm(files, 'Extracting spectral centroids'):
+        sr, data = wavfile.read('../datasets/{}/{}/{}'.format(args.year, dirname, file))
+
+        cts = librosa.feature.spectral_centroid(data.astype(np.float), sr)
+
+        with open('../features/{}/centroids/{}/{}.cts'.format(args.year, dirname, file.split('.')[0]), 'w') as out_file:
+            yaml.dump(cts, out_file)
+
+
 
 def main():
     use_train = not args.test
@@ -123,6 +151,11 @@ def main():
             os.makedirs('../features/{}/cqt/audio_train'.format(args.year))
             os.makedirs('../features/{}/cqt/audio_test'.format(args.year))
         dump_cqt_specs(use_train)
+    if args.centroids:
+        if not os.path.exists('../features/{}/centroids'.format(args.year)):
+            os.makedirs('../features/{}/centroids/audio_train'.format(args.year))
+            os.makedirs('../features/{}/centroids/audio_test'.format(args.year))
+        dump_spectral_centroids(use_train)
 
 if __name__ == '__main__':
     main()
