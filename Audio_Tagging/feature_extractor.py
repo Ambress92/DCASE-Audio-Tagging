@@ -98,7 +98,10 @@ def dump_mfcc_features(use_train):
     for file in tqdm.tqdm(files, 'Extracting mfccs'):
         sr, data = wavfile.read('../datasets/{}/{}/{}'.format(args.year, dirname, file))
 
-        mfcc = librosa.feature.mfcc(data.astype(np.float), sr, n_mfcc=40)
+        try:
+            mfcc = librosa.feature.mfcc(data.astype(np.float), sr, n_mfcc=40)
+        except:
+            print('Extraction failed for file {}'.format(file))
         #deltas = librosa.feature.delta(data)
         #delta_delta = librosa.feature.delta(data, order=2)
 
