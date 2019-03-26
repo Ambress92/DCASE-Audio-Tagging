@@ -4,6 +4,7 @@ import argparse
 from dataloader import get_verified_files_dict, load_verified_files, get_label_mapping, one_hot_encode
 import yaml
 import numpy as np
+import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-year', required=True)

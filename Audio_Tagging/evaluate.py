@@ -43,7 +43,7 @@ def main():
     elif args.clf == 'SVM':
         with open('models/SVM_verified.yml', 'r') as in_file:
             params = yaml.load(in_file)
-        clf = SVM()
+        clf = SVC()
         clf.set_params(params)
         predictions = clf.predict_proba(X)
     else:
