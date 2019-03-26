@@ -1,4 +1,5 @@
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
 import argparse
 from dataloader import get_verified_files_dict, load_verified_files, get_label_mapping, one_hot_encode
 import yaml
@@ -25,16 +26,30 @@ def main():
             X.append(datapoint)
             y.append(label_mapping[label])
 
+    print('Load complete')
+    
     if args.clf == 'RF':
-        clf = RandomForestClassifier(n_estimators=100, verbose=1, n_jobs=-2)
+        clf = RandomForestClassifier(n_estimators=100, verbose=1)
         clf.fit(X, y)
         params = clf.get_params()
-
+        
+        if not os.path.exists('../models'):
+            os.makedirs('../models')
+        
         with open('models/RF_verified.yml', 'w') as out_file:
             yaml.dump(params, out_file)
 
     elif args.clf == 'SVM':
-        pass
+        clf = SVC(C=1.0, kernel='rbf')
+        clf.fit(X,y)
+        params = clf.get_params()
+        
+        if not os.path.exists('../models'):
+            os.makedirs('../models')
+        
+        with open('models/SVM_verified.yml', 'w') as out_file:
+            yaml.dump(params, out_file)
+        
     else:
         pass
 
