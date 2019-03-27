@@ -109,8 +109,10 @@ def dump_mfcc_features(use_train):
             mfcc = librosa.feature.mfcc(data.astype(np.float), sr, n_mfcc=40)
         except:
             print('Extraction failed for file {}'.format(file))
-        #deltas = librosa.feature.delta(data)
-        #delta_delta = librosa.feature.delta(data, order=2)
+        deltas = librosa.feature.delta(mfcc)
+        delta_delta = librosa.feature.delta(mfcc, order=2)
+
+        mfcc = np.vstack((mfcc, deltas, delta_delta))
 
         mfcc = normalize_features(mfcc.T)
 
@@ -139,7 +141,7 @@ def dump_spectral_centroids(use_train):
 
         cts = librosa.feature.spectral_centroid(data.astype(np.float), sr)
 
-        np.save('../features/{}/centroids/{}/{}.cts'.format(args.year, dirname, file.split('.')[0]), cts)
+        np.save('../features/{}/centroids/{}/{}.cts'.format(args.year, dirname, file.split('.')[0]), cts.T)
 
 
 
