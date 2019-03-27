@@ -1,9 +1,7 @@
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
-import os
 import argparse
 from dataloader import get_verified_files_dict, load_verified_files, get_label_mapping, one_hot_encode
-import yaml
 import numpy as np
 import os
 
@@ -37,8 +35,7 @@ def main():
         if not os.path.exists('../models'):
             os.makedirs('../models')
 
-        with open('../models/RF_verified.yml', 'w') as out_file:
-            yaml.dump(clf, out_file)
+        np.save('../models/RF_verified.npy', clf)
 
     elif args.clf == 'SVM':
 
@@ -49,8 +46,7 @@ def main():
         if not os.path.exists('../models'):
             os.makedirs('../models')
 
-        with open('../models/SVM_verified.yml', 'w') as out_file:
-            yaml.dump(clf, out_file)
+        np.save('../models/SVM_verified.npy', clf)
     else:
         pass
 

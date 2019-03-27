@@ -1,7 +1,6 @@
 from scipy.io import wavfile
 import tqdm
 import numpy as np
-import yaml
 import os
 
 def get_verified_files_dict(year):
@@ -54,8 +53,7 @@ def load_verified_files(year, features=None):
         if not features:
             _, data = wavfile.read('../datasets/{}/audio_train/{}'.format(year, file))
         else:
-            with open('../features/{}/{}/audio_train/{}'.format(year, features, file.replace('wav', features)), 'r') as in_file:
-                data = yaml.load(in_file)
+            np.load('../features/{}/{}/audio_train/{}'.format(year, features, file.replace('wav', features)))
 
         verified_files.append((data, label))
 
@@ -71,8 +69,7 @@ def load_unverified_files(year, features=None):
         if not features:
             _, data = wavfile.read('../datasets/{}/audio_train/{}'.format(year, file))
         else:
-            with open('../features/{}/{}/audio_train/{}'.format(year, features, file.replace('wav', features)), 'r') as in_file:
-                data = yaml.load(in_file)
+            np.load('../features/{}/{}/audio_train/{}'.format(year, features, file.replace('wav', features)))
 
         unverified_files.append((data, label))
 
@@ -107,8 +104,7 @@ def load_test_files(year, features=None):
             if not os.path.exists('../features/{}/{}/audio_test'.format(year, features)):
                 print('\nPlease extract features prior to loading!\n')
                 return
-            with open('../features/{}/{}/audio_test/{}'.format(year, features, file.replace('wav', features)), 'r') as in_file:
-                data = yaml.load(in_file)
+            np.load('../features/{}/{}/audio_test/{}'.format(year, features, file.replace('wav', features)))
 
         test_files.append((data, label))
 

@@ -1,11 +1,7 @@
 # https://github.com/DCASE-REPO/dcase2018_baseline
 import argparse
-import yaml
 import numpy as np
 from dataloader import load_test_files, get_label_mapping
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC
-from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 import matplotlib.pyplot as plt
 import itertools
@@ -78,12 +74,10 @@ def main():
 
     # reconstruct models and classify test clips
     if args.clf == 'RF':
-        with open('../models/RF_verified.yml', 'r') as in_file:
-            clf = yaml.load(in_file)
+        clf = np.load('../models/RF_verified.npy')
         predictions = clf.predict_proba(X)
     elif args.clf == 'SVM':
-        with open('../models/SVM_verified.yml', 'r') as in_file:
-            clf = yaml.load(in_file)
+        clf = np.load('../models/RF_verified.npy')
         predictions = clf.predict_proba(X)
     else:
         pass

@@ -3,7 +3,6 @@ import tqdm
 import argparse
 import os
 from scipy.io import wavfile
-import yaml
 import numpy as np
 
 parser = argparse.ArgumentParser()
@@ -37,8 +36,8 @@ def dump_cqt_specs(use_train):
 
         spec = librosa.cqt(data.astype(np.float), sr=sr)
 
-        with open('../features/{}/cqt/{}/{}.cqt'.format(args.year, dirname, file.split('.')[0]), 'w') as out_file:
-            yaml.dump(spec, out_file)
+        np.save('../features/{}/cqt/{}/{}.cqt'.format(args.year, dirname, file.split('.')[0]), spec)
+
 
 def dump_mel_specs(use_train):
     """
@@ -75,8 +74,7 @@ def dump_mel_specs(use_train):
         spec = librosa.feature.melspectrogram(S=stft, sr=sr, n_mels=n_mels, fmax=fmax)
 
 
-        with open('../features/{}/mel/{}/{}.mel'.format(args.year, dirname, file.split('.')[0]), 'w') as out_file:
-            yaml.dump(spec, out_file)
+        np.save('../features/{}/mel/{}/{}.mel'.format(args.year, dirname, file.split('.')[0]), spec)
 
 def dump_mfcc_features(use_train):
     """
@@ -105,8 +103,7 @@ def dump_mfcc_features(use_train):
         #deltas = librosa.feature.delta(data)
         #delta_delta = librosa.feature.delta(data, order=2)
 
-        with open('../features/{}/mfcc/{}/{}.mfcc'.format(args.year, dirname, file.split('.')[0]), 'w') as out_file:
-           yaml.dump(mfcc.T, out_file)
+        np.save('../features/{}/mfcc/{}/{}.mfcc'.format(args.year, dirname, file.split('.')[0]), mfcc)
 
 def dump_spectral_centroids(use_train):
     """
@@ -131,8 +128,7 @@ def dump_spectral_centroids(use_train):
 
         cts = librosa.feature.spectral_centroid(data.astype(np.float), sr)
 
-        with open('../features/{}/centroids/{}/{}.cts'.format(args.year, dirname, file.split('.')[0]), 'w') as out_file:
-            yaml.dump(cts, out_file)
+        np.save('../features/{}/centroids/{}/{}.cts'.format(args.year, dirname, file.split('.')[0]), cts)
 
 
 
