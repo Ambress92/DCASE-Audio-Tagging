@@ -14,6 +14,12 @@ parser.add_argument('--centroids', action='store_true')
 parser.add_argument('--melspectrogram', action='store_true')
 args = parser.parse_args()
 
+def normalize_features(features):
+    features_mean = np.mean(features, axis=1)
+    features_std = np.std(features, axis=1)
+    normalized_features = (features - features_mean[:, np.newaxis]) / features_std[:, np.newaxis]
+    return normalized_features.T
+
 def dump_cqt_specs(use_train):
     """
     Computes constant Q-transform and dumps results into according directory.
@@ -35,6 +41,8 @@ def dump_cqt_specs(use_train):
         sr, data = wavfile.read('../datasets/{}/{}/{}'.format(args.year, dirname, file))
 
         spec = librosa.cqt(data.astype(np.float), sr=sr)
+
+        spec = normalize_features(spec.T)
 
         np.save('../features/{}/cqt/{}/{}.cqt'.format(args.year, dirname, file.split('.')[0]), spec)
 
@@ -73,6 +81,7 @@ def dump_mel_specs(use_train):
         stft = np.log10(stft+1)
         spec = librosa.feature.melspectrogram(S=stft, sr=sr, n_mels=n_mels, fmax=fmax)
 
+        spec = normalize_features(spec.T)
 
         np.save('../features/{}/mel/{}/{}.mel'.format(args.year, dirname, file.split('.')[0]), spec)
 
@@ -102,6 +111,8 @@ def dump_mfcc_features(use_train):
             print('Extraction failed for file {}'.format(file))
         #deltas = librosa.feature.delta(data)
         #delta_delta = librosa.feature.delta(data, order=2)
+
+        mfcc = normalize_features(mfcc.T)
 
         np.save('../features/{}/mfcc/{}/{}.mfcc'.format(args.year, dirname, file.split('.')[0]), mfcc)
 
