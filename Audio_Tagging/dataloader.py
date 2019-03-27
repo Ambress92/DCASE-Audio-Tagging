@@ -53,7 +53,7 @@ def load_verified_files(year, features=None):
         if not features:
             _, data = wavfile.read('../datasets/{}/audio_train/{}'.format(year, file))
         else:
-            np.load('../features/{}/{}/audio_train/{}.npy'.format(year, features, file.replace('wav', features)))
+            data = np.load('../features/{}/{}/audio_train/{}.npy'.format(year, features, file.replace('wav', features)))
 
         verified_files.append((data, label))
 
@@ -69,7 +69,7 @@ def load_unverified_files(year, features=None):
         if not features:
             _, data = wavfile.read('../datasets/{}/audio_train/{}'.format(year, file))
         else:
-            np.load('../features/{}/{}/audio_train/{}.npy'.format(year, features, file.replace('wav', features)))
+            data = np.load('../features/{}/{}/audio_train/{}.npy'.format(year, features, file.replace('wav', features)))
 
         unverified_files.append((data, label))
 
@@ -104,7 +104,7 @@ def load_test_files(year, features=None):
             if not os.path.exists('../features/{}/{}/audio_test'.format(year, features)):
                 print('\nPlease extract features prior to loading!\n')
                 return
-            np.load('../features/{}/{}/audio_test/{}.npy'.format(year, features, file.replace('wav', features)))
+            data = np.load('../features/{}/{}/audio_test/{}.npy'.format(year, features, file.replace('wav', features)))
 
         test_files.append((data, label))
 
