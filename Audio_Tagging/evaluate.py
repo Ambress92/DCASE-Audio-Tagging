@@ -79,15 +79,11 @@ def main():
     # reconstruct models and classify test clips
     if args.clf == 'RF':
         with open('../models/RF_verified.yml', 'r') as in_file:
-            params = yaml.load(in_file)
-        clf = RandomForestClassifier()
-        clf.set_params(params)
+            clf = yaml.load(in_file)
         predictions = clf.predict_proba(X)
     elif args.clf == 'SVM':
         with open('../models/SVM_verified.yml', 'r') as in_file:
-            params = yaml.load(in_file)
-        clf = SVC()
-        clf.set_params(params)
+            clf = yaml.load(in_file)
         predictions = clf.predict_proba(X)
     else:
         pass
@@ -120,3 +116,6 @@ def avg_precision(actual=None, predicted=None):
         if actual == p:
             return 1.0 / (i + 1.0)
     return 0.0
+
+if __name__ == '__main__':
+    main()
