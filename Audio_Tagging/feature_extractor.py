@@ -18,7 +18,7 @@ def normalize_features(features):
     features_mean = np.mean(features, axis=1)
     features_std = np.std(features, axis=1)
     normalized_features = (features - features_mean[:, np.newaxis]) / features_std[:, np.newaxis]
-    return normalized_features.T
+    return normalized_features
 
 def dump_cqt_specs(use_train):
     """
@@ -42,7 +42,7 @@ def dump_cqt_specs(use_train):
 
         spec = librosa.cqt(data.astype(np.float), sr=sr)
 
-        spec = normalize_features(spec.T)
+        spec = normalize_features(spec)
 
         np.save('../features/{}/cqt/{}/{}.cqt'.format(args.year, dirname, file.split('.')[0]), spec)
 
@@ -81,7 +81,7 @@ def dump_mel_specs(use_train):
         stft = np.log10(stft+1)
         spec = librosa.feature.melspectrogram(S=stft, sr=sr, n_mels=n_mels, fmax=fmax)
 
-        spec = normalize_features(spec.T)
+        spec = normalize_features(spec)
 
         np.save('../features/{}/mel/{}/{}.mel'.format(args.year, dirname, file.split('.')[0]), spec)
 
