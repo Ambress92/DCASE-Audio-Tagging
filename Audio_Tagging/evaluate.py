@@ -83,12 +83,9 @@ def main():
         pass
 
     # compute mean average label precision
-    # print([predictions[slc] for slc in audio_splits])
     predictions = [get_top_predicted_classes(predictions[slc]) for slc in audio_splits]
-    map = [avg_precision(a, p) for a, p in zip(y, predictions)]
-    print(map)
-    map = np.mean(map)
-    print('Model {} achieved an average label precision of {}.'.format(args.clf, map))
+    avg_precisions = np.mean([avg_precision(a, p) for a, p in zip(y, predictions)])
+    print('Model {} achieved an average label precision of {}.'.format(args.clf, avg_precisions))
     # show additional metrics
     print_precision_recall_fscore(predictions, y)
 
