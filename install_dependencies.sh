@@ -23,7 +23,7 @@ conda install -y -c conda-forge ffmpeg
 #conda install -y pytorch torchvision cuda91 -c pytorch
 
 conda install -y tensorflow-gpu-base
-conda install -y -c anaconda tensorflow-gpu cupy
+conda install -y -c anaconda tensorflow-gpu==1.12 cupy
 pip install keras
 pip install sed_eval
 pip install pynvrtc
@@ -36,3 +36,8 @@ echo Clean/remove environment using :
 echo $ source deactivate
 echo $ conda env remove -n dcase_audio_tagging
 echo remember always \"source activate dcase_audio_tagging\"
+
+# if error occurs when importing tensorflow - module "abs" not found, execute the following steps
+#pip uninstall tensorflow protobuf --yes
+#find $CONDA_PREFIX -name "tensorflow" | xargs -Ipkg rm -rfv pkg
+#pip install --ignore-installed --upgrade tensorflow-gpu==1.12 --no-cache-dir
