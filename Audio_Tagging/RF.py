@@ -2,7 +2,7 @@ from sklearn.ensemble import RandomForestClassifier
 import argparse
 from dataloader import load_verified_files, get_label_mapping, load_test_files
 import numpy as np
-from evaluate import avg_precision
+from evaluate import avg_precision, plot_results_table
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 import matplotlib.pyplot as plt
 import itertools
@@ -20,6 +20,7 @@ def save_confusion_matrix(predictions, true_labels, normalize=False):
     if normalize:
         cnf_matrix = cnf_matrix.astype(np.float) / cnf_matrix.sum(axis=1)[:, np.newaxis]
 
+    plt.figure(figsize=(15,15))
     plt.imshow(np.log(cnf_matrix), interpolation='nearest', cmap=plt.get_cmap('Blues'))
     plt.title('Confusion Matrix')
     plt.xticks(np.arange(len(labels)), labels, rotation=45)
@@ -98,7 +99,7 @@ def main():
     # show additional metrics
     predictions = np.argmax(predictions, axis=1)
     p, r, f, s = precision_recall_fscore_support(y_true, predictions)
-    counts = Counter(y)
+    counts = Counter(y_true)
     num_classes = len(np.unique(y))
     label_mapping = get_label_mapping(args.year)
 
@@ -106,11 +107,12 @@ def main():
     print("%9s  |   %s  |  %4s  |  %4s  |   %4s   |" % ("CLASS", "CNT", "PR ", "RE ", "F1 "))
     print('-' * 50)
     for c in range(num_classes):
-        print("%9s  |  % 4d  |  %.2f  |  %.2f  |  %.3f   |" % (label_mapping[c], counts[c], p[c], r[c], f[c]))
+        print("%9s  |  % 4d  |  %.2f  |  %.2f  |  %.3f   |" % (inv_label_mapping[c], counts[c], p[c], r[c], f[c]))
     print('-' * 50)
     print("%9s  |  % 4d  |  %.2f  |  %.2f  |  %.3f   |" % (
     'average', np.sum(list(counts.values())), np.mean(p), np.mean(r), np.mean(f)))
     print('=' * 50)
+    plot_results_table(p, r, f, counts, inv_label_mapping, num_classes, 'RF')
     save_confusion_matrix(predictions, y_true)
 
 

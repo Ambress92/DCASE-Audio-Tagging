@@ -2,7 +2,7 @@ from sklearn.svm import SVC
 import argparse
 from dataloader import load_verified_files, get_label_mapping, load_test_files
 import numpy as np
-from evaluate import avg_precision
+from evaluate import avg_precision, plot_results_table
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 import matplotlib.pyplot as plt
 import itertools
@@ -98,7 +98,7 @@ def main():
     # show additional metrics
     predictions = np.argmax(predictions, axis=1)
     p, r, f, s = precision_recall_fscore_support(y_true, predictions)
-    counts = Counter(y)
+    counts = Counter(y_true)
     num_classes = len(np.unique(y))
     label_mapping = get_label_mapping(args.year)
 
@@ -112,6 +112,7 @@ def main():
     'average', np.sum(list(counts.values())), np.mean(p), np.mean(r), np.mean(f)))
     print('=' * 50)
     save_confusion_matrix(predictions, y_true)
+    plot_results_table(p, r, f, counts, inv_label_mapping, num_classes, 'SVM')
 
 
 if __name__ == '__main__':

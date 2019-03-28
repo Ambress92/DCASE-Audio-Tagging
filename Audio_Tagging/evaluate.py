@@ -54,6 +54,51 @@ def print_precision_recall_fscore(predictions, true_labels):
     print("%9s  |  % 4d  |  %.2f  |  %.2f  |  %.3f   |" % ('average', np.sum(list(counts.values())), np.mean(p), np.mean(r), np.mean(f)))
     print('=' * 50)
 
+def plot_results_table(p, r, f, count, id_class_mapping, num_classes, clf):
+    columns = ['CLASS', 'COUNT', 'PR', 'RE', 'F1']
+    row_text = []
+    classes = [id_class_mapping[c] for c in range(num_classes)]
+
+    row_text = []
+    latex_table = '\\begin{tabular}{rrrrr}\n\
+    \\toprule\n\
+         \\multicolumn{1}{c}{CLASS}\n\
+         & \\multicolumn{1}{c}{COUNT}\n\
+         & \\multicolumn{1}{c}{PR}\n\
+         & \\multicolumn{1}{c}{RE}\n\
+         & \\multicolumn{1}{c}{F1} \\\\\n\
+    \\midrule\n'
+    for c in range(len(classes)):
+        # row = []
+        # row.append("%9s" % classes[c])
+        # row.append("% 4d" % count[c])
+        # row.append("%.2f" % p[c])
+        # row.append("%.2f" % r[c])
+        # row.append("%.3f" % f[c])
+        # row_text.append(row)
+        latex_table += "%9s & %4d & %.2f & %.2f & %.3f\\\\\n" % (classes[c], count[c], p[c], r[c], f[c])
+
+    row_text.append(["average", "% 4d " % np.sum(list(count.values())), "%.2f" % np.mean(p), "%.2f" % np.mean(r), "%.3f" % np.mean(f)])
+    latex_table += "\midrule\naverage & %4d & %.2f & %.2f & %.3f\\\\\n\\bottomrule\n\end{tabular}" % (np.sum(list(count.values())), np.mean(p), np.mean(r), np.mean(f))
+    plt.figure(figsize=(15,15))
+    fig, ax = plt.subplots()
+
+    # hide axes
+    fig.patch.set_visible(False)
+    ax.axis('off')
+    ax.axis('tight')
+
+    with open('plots/{}_latex_table.tex'.format(clf), "w") as latex_out:
+        latex_out.write(latex_table)
+
+    table = ax.table(cellText=row_text,
+                     colLabels=columns,
+                     loc='center')
+
+    fig.tight_layout()
+
+    plt.gcf().savefig('plots/RF_table.pdf')
+
 def main():
     # load and prep test data
     print('Loading test clips...')
