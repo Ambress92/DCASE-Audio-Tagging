@@ -1,5 +1,3 @@
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC
 import argparse
 from dataloader import get_verified_files_dict, load_verified_files, get_label_mapping, one_hot_encode
 import numpy as np
@@ -30,25 +28,15 @@ def main():
     X = np.asarray(X)
     y = np.asarray(y)
 
-    if args.clf == 'RF':
-        clf = RandomForestClassifier(n_estimators=100, verbose=2, max_depth=None)
-        clf.fit(X, y)
-
-        if not os.path.exists('../models'):
-            os.makedirs('../models')
-
-        np.save('../models/RF_verified.npy', clf)
-
-    elif args.clf == 'SVM':
+    if args.clf == 'SVM':
 
         print('beginning SVM')
-        clf = SVC(C=1.0, kernel='rbf', verbose=True, max_iter=None, probability=True)
-        clf.fit(X, y)
 
-        if not os.path.exists('../models'):
-            os.makedirs('../models')
 
-        np.save('../models/SVM_verified.npy', clf)
+        if not os.path.exists('models'):
+            os.makedirs('models')
+
+        # np.save('models/SVM_verified.npy', clf)
     else:
         pass
 

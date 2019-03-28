@@ -74,10 +74,10 @@ def main():
 
     # reconstruct models and classify test clips
     if args.clf == 'RF':
-        clf = np.load('../models/RF_verified.npy')
+        clf = np.load('models/RF_verified.npy')
         predictions = clf.predict_proba(X)
     elif args.clf == 'SVM':
-        clf = np.load('../models/RF_verified.npy')
+        clf = np.load('models/RF_verified.npy')
         predictions = clf.predict_proba(X)
     else:
         pass
