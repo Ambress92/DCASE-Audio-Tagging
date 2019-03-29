@@ -2,6 +2,7 @@ from scipy.io import wavfile
 import tqdm
 import numpy as np
 import os
+import tensorflow as tf
 
 def get_verified_files_dict(year):
     with open('../datasets/{}/train.csv'.format(year), 'r') as in_file:
@@ -116,6 +117,38 @@ def get_label_mapping(year):
     label_mapping = {label: index for index, label in enumerate(labels)}
     inv_label_mapping = {v: k for k, v in zip(label_mapping.keys(), label_mapping.values())}
     return label_mapping, inv_label_mapping
+
+def total_label_mapping(year):
+    """
+    Returns label mapping and number of classes for both,
+    verified and unverified data.
+
+    Parameters
+    ----------
+    year : int
+        Year of the data.
+
+    Returns
+    -------
+    label_mapping : Dict
+        Dictionary containing name of class and integer identifier.
+    num_classes : int
+        Number of classes in verified and unverified data.
+    table : tf.contrib.lookup.HashTable
+        Dictionary in tensorflow-compatible form.
+    """
+    total_labels = np.unique(list(get_verified_files_dict(year).values())
+                           + list(get_unverified_files_dict(year).values()))
+    label_mapping = {index: label for index, label in enumerate(sorted(total_labels))}
+
+    table = tf.contrib.lookup.HashTable(
+            tf.contrib.lookup.KeyValueTensorInitializer(
+                np.array(list(label_mapping.values())),
+                np.array(list(label_mapping.keys())),
+                key_dtype=tf.string, value_dtype=tf.int32), -1)
+
+    return label_mapping, len(label_mapping), table
+
 
 def one_hot_encode(label, num_classes):
     """
