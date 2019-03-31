@@ -3,12 +3,20 @@ import numpy as np
 import argparse
 import sys
 from preprocess_data import train_input
+import matplotlib.pyplot as plt
 
 slim = tf.contrib.slim
 
 # see https://github.com/DCASE-REPO/dcase2018_baseline/tree/master/task2
 
 ###### build models ######
+
+def save_learning_curve(epoch, loss):
+    plt.title('Learning curve')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.plot(np.arange(0,epoch), loss)
+    plt.gcf().savefig('plots/learning_curve.png')
 
 def define_model(model_name, features=None, training=False, hparams=None,
              num_classes=None, labels=None):
@@ -135,6 +143,7 @@ def train(model_name, year, hparams=None, train_clip_dir=None,
     print('\nTraining model:{} with hparams:{}'.format(model_name, hparams))
     print('Training data: clip dir {} and labels {}'.format(train_clip_dir, train_csv_path))
     print('Training dir {}\n'.format(train_dir))
+    losses = []
 
     with tf.Graph().as_default():
         # prepare input
@@ -159,6 +168,8 @@ def train(model_name, year, hparams=None, train_clip_dir=None,
             while not sess.should_stop():
                 step, _, pred, loss = sess.run([global_step, train_op, prediction, loss_tensor])
                 print(step, loss)
+                losses.append(loss)
+                save_learning_curve(step, loss)
                 sys.stdout.flush()
 
 

@@ -4,6 +4,7 @@ import argparse
 import os
 from scipy.io import wavfile
 import numpy as np
+import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-year', required=True)
@@ -12,7 +13,21 @@ parser.add_argument('--mfcc', action='store_true')
 parser.add_argument('--cqt', action='store_true')
 parser.add_argument('--centroids', action='store_true')
 parser.add_argument('--melspectrogram', action='store_true')
+parser.add_argument('--plot', action='store_true')
 args = parser.parse_args()
+
+def plot_spectrogram(spectrogram, title):
+    print("Spectrogram Shape:", spectrogram.shape)
+
+    plt.figure()
+    plt.clf()
+    plt.subplots_adjust(right=0.98, left=0.1, bottom=0.1, top=0.99)
+    plt.imshow(spectrogram, origin="lower", interpolation="nearest", cmap="viridis")
+    plt.xlabel("%d frames" % spectrogram.shape[2])
+    plt.ylabel("%d bins" % spectrogram.shape[1])
+    plt.title(title)
+    plt.colorbar()
+    plt.show()
 
 def normalize_features(features):
     features_mean = np.mean(features, axis=1)
@@ -42,7 +57,15 @@ def dump_cqt_specs(use_train):
 
         spec = librosa.cqt(data.astype(np.float), sr=sr)
 
+        if args.plot:
+            plot_spectrogram(spec[0], 'CQT Spectrogram')
+            args.plot = False
+
         spec = normalize_features(spec)
+
+        if args.plot:
+            plot_spectrogram(spec[0], 'CQT Spectrogram Normalized')
+            args.plot = False
 
         np.save('../features/{}/cqt/{}/{}.cqt'.format(args.year, dirname, file.split('.')[0]), spec)
 
@@ -81,7 +104,17 @@ def dump_mel_specs(use_train):
         stft = np.log10(stft+1)
         spec = librosa.feature.melspectrogram(S=stft, sr=sr, n_mels=n_mels, fmax=fmax)
 
+
+        if args.plot:
+            plot_spectrogram(spec[0], 'Mel Spectrogram')
+            args.plot = False
+
         spec = normalize_features(spec)
+
+
+        if args.plot:
+            plot_spectrogram(spec[0], 'Mel Spectrogram Normalized')
+            args.plot = False
 
         np.save('../features/{}/mel/{}/{}.mel'.format(args.year, dirname, file.split('.')[0]), spec)
 
@@ -142,7 +175,6 @@ def dump_spectral_centroids(use_train):
         cts = librosa.feature.spectral_centroid(data.astype(np.float), sr)
 
         np.save('../features/{}/centroids/{}/{}.cts'.format(args.year, dirname, file.split('.')[0]), cts.T)
-
 
 
 def main():
