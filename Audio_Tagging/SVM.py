@@ -65,7 +65,7 @@ def main():
     X = np.asarray(X)
     y = np.asarray(y)
 
-    clf = SVC(random_state=101, probability=True)
+    clf = SVC(random_state=101, probability=True, verbose=True)
     clf.fit(X, y)
 
     # load and prep test data

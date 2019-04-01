@@ -169,9 +169,10 @@ def train(model_name, year, hparams=None, train_clip_dir=None,
                 step, _, pred, loss = sess.run([global_step, train_op, prediction, loss_tensor])
                 print(step, loss)
                 losses.append(loss)
-                save_learning_curve(step, loss)
+                # save_learning_curve(step, loss)
                 sys.stdout.flush()
 
+        save_learning_curve(np.arange(1,len(losses)+1), losses)
 
 ###### main ######
 
@@ -201,7 +202,7 @@ def parse_flags():
     training_group.add_argument('--train_csv_path', type=str,
         default='../datasets/2018/train.csv',
         help='Path to CSV file containing training clip filenames and labels.')
-    training_group.add_argument('--train_dir', type=str, default='../models/',
+    training_group.add_argument('--train_dir', type=str, default='models/',
         help='Path to a directory which will hold model checkpoints and other outputs.')
 
     flags = parser.parse_args()
