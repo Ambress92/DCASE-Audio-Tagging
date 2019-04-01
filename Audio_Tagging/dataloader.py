@@ -130,12 +130,13 @@ def total_label_mapping(year):
 
     Returns
     -------
-    label_mapping : Dict
-        Dictionary containing name of class and integer identifier.
+    table : tf.contrib.lookup.HashTable
+        Dictionary in tensorflow-compatible form, containing
+        name of class and integer identifier.
+    label_mapping : dict
+        Dictionary mapping class indices to real string identifier.
     num_classes : int
         Number of classes in verified and unverified data.
-    table : tf.contrib.lookup.HashTable
-        Dictionary in tensorflow-compatible form.
     """
     total_labels = np.unique(list(get_verified_files_dict(year).values())
                            + list(get_unverified_files_dict(year).values()))
@@ -147,7 +148,7 @@ def total_label_mapping(year):
                 np.array(list(label_mapping.keys())),
                 key_dtype=tf.string, value_dtype=tf.int32), -1)
 
-    return label_mapping, len(label_mapping), table
+    return table, label_mapping, len(label_mapping)
 
 
 def one_hot_encode(label, num_classes):

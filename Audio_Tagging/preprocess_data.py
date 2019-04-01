@@ -150,7 +150,7 @@ def train_input(year, train_csv_path=None, train_clip_dir=None, hparams=None):
         labels, to be run before the input pipeline is read.
     """
 
-    _, num_classes, label_mapping = total_label_mapping(year)
+    label_mapping, _, num_classes = total_label_mapping(year)
 
     dataset = tf.data.TextLineDataset(train_csv_path)
     # skip header

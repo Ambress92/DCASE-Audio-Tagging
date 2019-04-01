@@ -21,21 +21,22 @@ def save_learning_curve(epoch, loss):
 def define_model(model_name, features=None, training=False, hparams=None,
              num_classes=None, labels=None):
     """
+    Builds and prepares model we want to work with.
 
     Parameters
     ----------
     model_name : String
         Defines which model we want to train. Currently only supports 'baseline'.
-    features :
-
+    features : Tensor
+        Tensor containing a batch of input features (log mel spectrum examples).
     training : Bool
         True iff model is trained.
-    hparams :
+    hparams : tf.contrib.training.HParams
         Hyperparameters of model.
     num_classes : int
         Number of possible tags.
-    labels :
-
+    labels : Tensor
+        Correct labels we need for training the model.
 
     Return
     ------
@@ -45,8 +46,8 @@ def define_model(model_name, features=None, training=False, hparams=None,
         Tensor containing predictions from classifier layer.
     loss : Tensor
         Tensor containing loss for each batch.
-    train_op :
-
+    train_op : Optimizer
+        Optimizer that runs training for batches.
     """
 
     global_step = tf.Variable(0, name='global_step', trainable=training,
@@ -93,13 +94,13 @@ def build_baseline_cnn(features=None):
 
     Parameters
     ----------
-    features :
-
+    features : Tensor
+        Tensor containing a batch of input features (log mel spectrum examples).
 
     Return
     ------
     net :
-
+        Baseline CNN without classification layer.
     """
 
     net = tf.expand_dims(features, axis=3)
@@ -127,17 +128,14 @@ def train(model_name, year, hparams=None, train_clip_dir=None,
         Defines which model we want to train. Currently only support 'baseline'.
     year : int
         Year we want to take the data from.
-    hparams :
-
-    train_clip_dir :
-
-    train_csv_path :
-
-    train_dir :
-
-    Return
-    ------
-
+    hparams : tf.contrib.training.HParams
+        Hyperparameters of the model we want to train.
+    train_clip_dir : String
+        Path to directory containing training data.
+    train_csv_path : String
+        Path to train.csv file.
+    train_dir : String
+        Path to store all checkpoints of our trained model.
     """
 
     print('\nTraining model:{} with hparams:{}'.format(model_name, hparams))
@@ -173,101 +171,3 @@ def train(model_name, year, hparams=None, train_clip_dir=None,
                 sys.stdout.flush()
 
         save_learning_curve(np.arange(1,len(losses)+1), losses)
-
-###### main ######
-
-def parse_flags():
-    """
-    Parses and returns input flags.
-    """
-    parser = argparse.ArgumentParser()
-
-    # common flags
-    all_modes_group = parser.add_argument_group('Common flags')
-    all_modes_group.add_argument('--mode', type=str, choices=['train', 'eval', 'inference'],
-        required=True, help='Run one of training, evaluation, or inference.')
-    all_modes_group.add_argument('--model', type=str, choices=['baseline'],
-        default='baseline', required=False,
-        help='Name of a model architecture. Currently, only "baseline" possible.')
-    all_modes_group.add_argument('--hparams', type=str, default='',
-        help='Model hyperparameters in comma-separated name=value format.')
-    all_modes_group.add_argument('--year', type=int, default=2018, required=False,
-        help='Year of the data we want to process')
-
-    # flags for training
-    training_group = parser.add_argument_group('Flags for training only')
-    training_group.add_argument('--train_clip_dir', type=str,
-        default='../datasets/2018/audio_train/',
-        help='Path to training-clips-directory.')
-    training_group.add_argument('--train_csv_path', type=str,
-        default='../datasets/2018/train.csv',
-        help='Path to CSV file containing training clip filenames and labels.')
-    training_group.add_argument('--train_dir', type=str, default='models/',
-        help='Path to a directory which will hold model checkpoints and other outputs.')
-
-    flags = parser.parse_args()
-
-    try:
-        if flags.mode == 'train':
-            assert flags.train_clip_dir, 'Must specify --train_clip_dir'
-            assert flags.train_csv_path, 'Must specify --train_csv_path'
-            assert flags.train_dir, 'Must specify --train_dir'
-    except AssertionError as e:
-        print('\nError: ', e, '\n')
-        parser.print_help()
-        sys.exit(1)
-
-    return flags
-
-def parse_hparams(flag_hparams):
-    """
-    Parses and returns hyperparameters of specified model.
-    """
-
-    # defaul values
-    hparams = tf.contrib.training.HParams(
-        # window and hop length for STFT
-        stft_window_seconds=0.025,
-        stft_hop_seconds=0.010,
-        # spectrogram to mel spectrogram parameters
-        mel_bands=64,
-        mel_min_hz=125,
-        mel_max_hz=7500,
-        # log mel spectrogram = log(mel-spectrogram + mel_log_offset)
-        mel_log_offset=0.001,
-        # window and hop length to frame the log mel spectrogram into examples
-        example_window_seconds=0.250,
-        example_hop_seconds=0.125,
-        # number of examples in a batch
-        batch_size=64,
-        # for MLP, nl=# layers, nh=# units per layer
-        #nl=2,
-        #nh=256,
-        # SD of normal distribution to initialize the weights of the model
-        weights_init_stddev=1e-3,
-        # learning rate
-        lr=1e-4,
-        # epsilon for Adam optimiser
-        adam_eps=1e-8,
-        # classifier layer: softmax or logistic
-        classifier='softmax')
-
-    # flags can override default hparam values
-    hparams.parse(flag_hparams)
-
-    return hparams
-
-def main():
-    # parse flags and hyperparameters
-    flags = parse_flags()
-    hparams = parse_hparams(flags.hparams)
-
-    if flags.mode == 'train':
-        train(model_name=flags.model, year=flags.year, hparams=hparams,
-              train_csv_path=flags.train_csv_path,
-              train_clip_dir=flags.train_clip_dir,
-              train_dir=flags.train_dir)
-
-
-if __name__ == '__main__':
-    main()
