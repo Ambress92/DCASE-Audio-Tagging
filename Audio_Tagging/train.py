@@ -41,47 +41,28 @@ def main():
     keras.backend.set_image_data_format('channels_first')
 
     print('Loading data...')
-    data = load_verified_files(args.year, args.features)
-
-    X = []
-    y = []
-    for x in data:
-        label = x[1]
-        x = x[0]
-        for datapoint in x:
-            X.append(datapoint)
-            y.append(label_mapping[label])
-
-    print('Load complete')
-    X = np.asarray(X)
-    y = np.asarray(y)
+    # add data loading here
 
     print('Loading model')
-
-    if not os.path.exists('models'):
-        os.makedirs('models')
-
-    if not os.path.exists('models/{}'.format(args.clf)):
-        print('Modelfile does not exist')
-
     # import model from file
     selected_model = utils.import_model(modelfile)
 
     # instantiate neural network
     print("Preparing training function...")
-    train_formats = (cfg['batch_size'], 1, X[0].shape[0], X[0].shape[1])
-    network = selected_model.architecture(train_formats, cfg)
+
+    # train_formats = (cfg['batch_size'], 1, X[0].shape[0], X[0].shape[1])
+    # network = selected_model.architecture(train_formats, cfg)
 
     # Add optimizer and compile model
     print("Compiling model ...")
-    optimizer = keras.optimizers.Adam(lr=cfg['lr'])
-    network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=["acc"])
+    # optimizer = keras.optimizers.Adam(lr=cfg['lr'])
+    # network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=["acc"])
 
     print("Preserving architecture and configuration ..")
-    save_model(modelfile.replace('.py', ''), network, cfg)
+    # save_model(modelfile.replace('.py', ''), network, cfg)
 
     # Add batch creator, and training procedure
-    # For reproduction of CPJKU2018 we need to create their train/test split, and their training procedure
+    # Add as soon as the data is available
 
 if __name__ == '__main__':
     main()
