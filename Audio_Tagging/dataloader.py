@@ -112,44 +112,15 @@ def load_test_files(year, features=None):
     return test_files
 
 def get_label_mapping(year):
-    verified_files_dict = get_verified_files_dict(year)
-    labels = np.unique(list(verified_files_dict.values()))
+    with open('../datasets/{}/train.csv'.format(year), 'r') as in_file:
+        train_list = in_file.readlines()
+
+    train_list = train_list[1:]
+    labels = np.unique([line.split(',')[1] for line in train_list])
+
     label_mapping = {label: index for index, label in enumerate(labels)}
     inv_label_mapping = {v: k for k, v in zip(label_mapping.keys(), label_mapping.values())}
     return label_mapping, inv_label_mapping
-
-def total_label_mapping(year):
-    """
-    Returns label mapping and number of classes for both,
-    verified and unverified data.
-
-    Parameters
-    ----------
-    year : int
-        Year of the data.
-
-    Returns
-    -------
-    table : tf.contrib.lookup.HashTable
-        Dictionary in tensorflow-compatible form, containing
-        name of class and integer identifier.
-    label_mapping : dict
-        Dictionary mapping class indices to real string identifier.
-    num_classes : int
-        Number of classes in verified and unverified data.
-    """
-    total_labels = np.unique(list(get_verified_files_dict(year).values())
-                           + list(get_unverified_files_dict(year).values()))
-    label_mapping = {index: label for index, label in enumerate(sorted(total_labels))}
-
-    table = tf.contrib.lookup.HashTable(
-            tf.contrib.lookup.KeyValueTensorInitializer(
-                np.array(list(label_mapping.values())),
-                np.array(list(label_mapping.keys())),
-                key_dtype=tf.string, value_dtype=tf.int32), -1)
-
-    return table, label_mapping, len(label_mapping)
-
 
 def one_hot_encode(label, num_classes):
     """
