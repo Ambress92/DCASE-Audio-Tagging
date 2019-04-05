@@ -24,6 +24,11 @@ def get_unverified_files_dict():
 
     return unverified_files_dict
 
+def get_total_file_dict():
+    curated_files = get_verified_files_dict()
+    noisy_files = get_unverified_files_dict()
+    return dict(curated_files, **noisy_files)
+
 def get_test_files_list():
     """
     Determines the ground-truth label of test audio samples.
@@ -41,6 +46,16 @@ def get_test_files_list():
     test_files = os.listdir('../datasets/test')
 
     return test_files
+
+def load_features(filelist):
+    # load verified audio clips
+    files = []
+    for file in tqdm.tqdm(filelist, 'Loading files'):
+        data = np.load('../features/{}/train_curated/{}.npy'.format(features, file.replace('wav', features)))
+
+        files.append(data)
+
+    return files
 
 
 def load_verified_files(features=None):

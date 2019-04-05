@@ -1,11 +1,12 @@
 import argparse
-from dataloader import get_verified_files_dict, load_verified_files, get_label_mapping, one_hot_encode
+import dataloader
 import numpy as np
 import os
 import utils
 import keras
 from argparse import ArgumentParser
 import config
+import tqdm
 
 def opts_parser():
     descr = "Trains a neural network."
@@ -27,36 +28,74 @@ def save_model(modelfile, network, cfg):
         yaml_file.write(network_yaml)
 
 def main():
-    label_mapping, inv_label_mapping = get_label_mapping(args.year)
+    label_mapping, inv_label_mapping = dataloader.get_label_mapping()
     parser = opts_parser()
     options = parser.parse_args()
     modelfile = options.modelfile
     cfg = config.from_parsed_arguments(options)
     keras.backend.set_image_data_format('channels_first')
 
+    verified_files_dict = dataloader.get_verified_files_dict()
+    noisy_files_dict = dataloader.get_unverified_files_dict()
+    total_files_dict = dict(verified_files_dict, **noisy_files_dict)
+
     print('Loading data...')
-    # add data loading here
+    for fold in range(1,5):
+        # add data loading here
+        with open('../datasets/fold{}_train'.format(fold), 'r') as in_file:
+            train_files = in_file.readlines()
+        with open('../datasets/fold{}_eval'.format(fold), 'r') as in_file:
+            eval_files = in_file.readlines()
 
-    print('Loading model')
-    # import model from file
-    selected_model = utils.import_model(modelfile)
+        print('Loading training data')
+        X_train = dataloader.load_features(train_files)
+        X_test = dataloader.load_features(eval_files)
+        y_train = [dataloader.one_hot_encode(label_mapping(total_files_dict[file]), cfg['num_classes']) for file in train_files]
+        y_test = [dataloader.one_hot_encode(label_mapping(total_files_dict[file]), cfg['num_classes']) for file in eval_files]
+        X_train = np.asarray(X_train)
+        X_test = np.asarray(X_test)
+        y_train = np.asarray(y_train)
+        y_test = np.asarray(y_test)
 
-    # instantiate neural network
-    print("Preparing training function...")
+        print('Loading model')
+        # import model from file
+        selected_model = utils.import_model(modelfile)
 
-    # train_formats = (cfg['batch_size'], 1, X[0].shape[0], X[0].shape[1])
-    # network = selected_model.architecture(train_formats, cfg)
+        # instantiate neural network
+        print("Preparing training function...")
 
-    # Add optimizer and compile model
-    print("Compiling model ...")
-    # optimizer = keras.optimizers.Adam(lr=cfg['lr'])
-    # network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=["acc"])
+        train_formats = (cfg['batch_size'], 1, X_train[0].shape[0], X_train[0].shape[1])
+        network = selected_model.architecture(train_formats, cfg)
 
-    print("Preserving architecture and configuration ..")
-    # save_model(modelfile.replace('.py', ''), network, cfg)
+        # Add optimizer and compile model
+        print("Compiling model ...")
+        optimizer = keras.optimizers.Adam(lr=cfg['lr'])
+        network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=["acc"])
 
-    # Add batch creator, and training procedure
-    # Add as soon as the data is available
+        print("Preserving architecture and configuration ..")
+        save_model(modelfile.replace('.py', ''), network, cfg)
+
+        # Add batch creator, and training procedure
+        val_loss = []
+        val_acc = []
+        train_loss = []
+        train_acc = []
+        epochs_without_decrase = 0
+        f_scores = []
+
+        # run training loop
+        print("Training:")
+        for epoch in range(cfg['epochs']):
+
+            epoch_train_loss = []
+            epoch_train_acc = []
+            batch_val_loss = []
+            batch_val_acc = []
+
+            for _ in tqdm.trange(
+                    cfg['epochsize'],
+                    desc='Epoch %d/%d:' % (epoch + 1, cfg['epochs'])):
+                pass
 
 if __name__ == '__main__':
     main()
