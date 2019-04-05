@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 parser = ArgumentParser()
 parser.add_argument('--test', action='store_true')
+parser.add_argument('--noisy', action='store_true')
 parser.add_argument('--mfcc', action='store_true')
 parser.add_argument('--cqt', action='store_true')
 parser.add_argument('--centroids', action='store_true')
@@ -62,7 +63,10 @@ def dump_cqt_specs(dirname):
             plot_spectrogram(spec[0], 'CQT Spectrogram Normalized')
             args.plot = False
 
-        np.save('../features/cqt/{}/{}.cqt'.format(dirname, file.split('.')[0]), spec)
+        if not os.path.exists('../features/cqt/{}'.format(dirname)):
+            os.makedirs('../features/cqt/{}'.format(dirname))
+
+        np.save('../features/cqt/{}/{}'.format(dirname, file.split('.')[0]), spec)
 
 
 def dump_mel_specs(dirname):
@@ -107,7 +111,10 @@ def dump_mel_specs(dirname):
             plot_spectrogram(spec[0], 'Mel Spectrogram Normalized')
             args.plot = False
 
-        np.save('../features/mel/{}/{}.mel'.format(dirname, file.split('.')[0]), spec)
+        if not os.path.exists('../features/cts/{}'.format(dirname)):
+            os.makedirs('../features/cts/{}'.format(dirname))
+
+        np.save('../features/mel/{}/{}'.format(dirname, file.split('.')[0]), spec)
 
 def dump_mfcc_features(dirname):
     """
@@ -136,7 +143,10 @@ def dump_mfcc_features(dirname):
 
         mfcc = normalize_features(mfcc.T)
 
-        np.save('../features/mfcc/{}/{}.mfcc'.format(dirname, file.split('.')[0]), mfcc)
+        if not os.path.exists('../features/mfcc/{}'.format(dirname)):
+            os.makedirs('../features/mfcc/{}'.format(dirname))
+
+        np.save('../features/mfcc/{}/{}'.format(dirname, file.split('.')[0]), mfcc)
 
 def dump_spectral_centroids(dirname):
     """
@@ -157,7 +167,10 @@ def dump_spectral_centroids(dirname):
 
         cts = librosa.feature.spectral_centroid(data.astype(np.float), sr)
 
-        np.save('../features/{}/centroids/{}.cts'.format(dirname, file.split('.')[0]), cts.T)
+        if not os.path.exists('../features/cts/{}'.format(dirname)):
+            os.makedirs('../features/cts/{}'.format(dirname))
+
+        np.save('../features/{}/centroids/{}'.format(dirname, file.split('.')[0]), cts.T)
 
 
 def main():
@@ -165,7 +178,10 @@ def main():
 
     dirname = 'test'
     if use_train:
-        dirname = 'train'
+        if args.noisy:
+            dirname = 'train_noisy'
+        else:
+            dirname = 'train_curated'
 
     if args.mfcc:
         if not os.path.exists('../features/mfcc'):
