@@ -4,25 +4,27 @@ import numpy as np
 import os
 import tensorflow as tf
 
-def get_verified_files_dict(year):
-    with open('../datasets/{}/train.csv'.format(year), 'r') as in_file:
+def get_verified_files_dict():
+    with open('../datasets/train_curated.csv', 'r') as in_file:
         data_config = in_file.readlines()
         data_config = data_config[1:]
 
-    verified_files_dict = {line.split(',')[0]: line.split(',')[1] for line in data_config if line.split(',')[2].rstrip() == '0'}
+    verified_files_dict = {line.split(',')[0]: line.split(',')[1].replace('"', '').split(',') for line in data_config
+                           if line.split(',')[2].rstrip() == '0'}
 
     return verified_files_dict
 
-def get_unverified_files_dict(year):
-    with open('../datasets/{}/train.csv'.format(year), 'r') as in_file:
+def get_unverified_files_dict():
+    with open('../datasets/train_noisy.csv', 'r') as in_file:
         data_config = in_file.readlines()
         data_config = data_config[1:]
 
-    unverified_files_dict = {line.split(',')[0]: line.split(',')[1] for line in data_config if line.split(',')[2].rstrip() == '1'}
+    unverified_files_dict = {line.split(',')[0]: line.split(',')[1].replace('"', '').split(',') for line in data_config
+                             if line.split(',')[2].rstrip() == '1'}
 
     return unverified_files_dict
 
-def get_test_files_dict(year):
+def get_test_files_list():
     """
     Determines the ground-truth label of test audio samples.
 
@@ -33,50 +35,46 @@ def get_test_files_dict(year):
 
     Returns
     -------
-    test_dict : dictionary
-        Dictionary containing the name of an audio sample, and its
-        true label.
+    test_files : dictionary
+        List containing the name of an audio sample
     """
-    with open('../datasets/{}/test_post_competition.csv'.format(year), 'r') as in_file:
-        data_config = in_file.readlines()
-        data_config = data_config[1:]
+    test_files = os.listdir('../datasets/test')
 
-    test_dict = {line.split(',')[0]: line.split(',')[1] for line in data_config if line.split(',')[1].rstrip() != 'None'}
-    return test_dict
+    return test_files
 
 
-def load_verified_files(year, features=None):
-    verified_files_dict = get_verified_files_dict(year)
+def load_verified_files(features=None):
+    verified_files_dict = get_verified_files_dict()
 
     # load verified audio clips
     verified_files = []
     for file, label in tqdm.tqdm(zip(verified_files_dict.keys(), verified_files_dict.values()), 'Loading verified clips'):
         if not features:
-            _, data = wavfile.read('../datasets/{}/audio_train/{}'.format(year, file))
+            _, data = wavfile.read('../datasets/train_curated/{}'.format(file))
         else:
-            data = np.load('../features/{}/{}/audio_train/{}.npy'.format(year, features, file.replace('wav', features)))
+            data = np.load('../features/{}/train_curated/{}.npy'.format(features, file.replace('wav', features)))
 
         verified_files.append((data, label))
 
     return verified_files
 
-def load_unverified_files(year, features=None):
-    unverified_files_dict = get_unverified_files_dict(year)
+def load_unverified_files(features=None):
+    unverified_files_dict = get_unverified_files_dict()
 
     # load verified audio clips
     unverified_files = []
     for file, label in tqdm.tqdm(zip(unverified_files_dict.keys(), unverified_files_dict.values()),
                                  'Loading verified clips'):
         if not features:
-            _, data = wavfile.read('../datasets/{}/audio_train/{}'.format(year, file))
+            _, data = wavfile.read('../datasets/train_curated/{}'.format(file))
         else:
-            data = np.load('../features/{}/{}/audio_train/{}.npy'.format(year, features, file.replace('wav', features)))
+            data = np.load('../features/{}/train_curated/{}.npy'.format(features, file.replace('wav', features)))
 
         unverified_files.append((data, label))
 
     return unverified_files
 
-def load_test_files(year, features=None):
+def load_test_files(features=None):
     """
     Loads and returns test audio files of given year.
 
@@ -93,30 +91,30 @@ def load_test_files(year, features=None):
     test_files : List of Tuples
         List containing (data, label) tupels for all test audio clips.
     """
-    test_files_dict = get_test_files_dict(year)
+    files = get_test_files_list()
 
     # load test clips
     test_files = []
-    for file, label in tqdm.tqdm(zip(test_files_dict.keys(), test_files_dict.values()),
-                                 'Loading test clips'):
+    for file in tqdm.tqdm(files, 'Loading test clips'):
         if not features:
-            _, data = wavfile.read('../datasets/{}/audio_test/{}'.format(year, file))
+            _, data = wavfile.read('../datasets/test/{}'.format(file))
         else:
-            if not os.path.exists('../features/{}/{}/audio_test'.format(year, features)):
+            if not os.path.exists('../features/{}/audio_test'.format(features)):
                 print('\nPlease extract features prior to loading!\n')
                 return
-            data = np.load('../features/{}/{}/audio_test/{}.npy'.format(year, features, file.replace('wav', features)))
+            data = np.load('../features/{}/audio_test/{}.npy'.format(features, file.replace('wav', features)))
 
-        test_files.append((data, label))
+        test_files.append(data)
 
     return test_files
 
-def get_label_mapping(year):
-    with open('../datasets/{}/train.csv'.format(year), 'r') as in_file:
+def get_label_mapping():
+    with open('../datasets/train_curated.csv', 'r') as in_file:
         train_list = in_file.readlines()
 
     train_list = train_list[1:]
-    labels = np.unique([line.split(',')[1] for line in train_list])
+    labels = np.unique([line.split(',')[1] if not '"' in line else line.replace('"', '').split(',') for line in train_list])
+
 
     label_mapping = {label: index for index, label in enumerate(labels)}
     inv_label_mapping = {v: k for k, v in zip(label_mapping.keys(), label_mapping.values())}

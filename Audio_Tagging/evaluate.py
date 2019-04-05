@@ -1,4 +1,3 @@
-# https://github.com/DCASE-REPO/dcase2018_baseline
 import numpy as np
 from dataloader import get_label_mapping
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
