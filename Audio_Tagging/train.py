@@ -7,12 +7,6 @@ import keras
 from argparse import ArgumentParser
 import config
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-year', required=True)
-parser.add_argument('-features', required=True)
-parser.add_argument('-clf', help='Classifier to use, by default RF is used', default='RF')
-args = parser.parse_args()
-
 def opts_parser():
     descr = "Trains a neural network."
     parser = ArgumentParser(description=descr)
