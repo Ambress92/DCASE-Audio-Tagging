@@ -9,8 +9,8 @@ def get_verified_files_dict():
         data_config = in_file.readlines()
         data_config = data_config[1:]
 
-    verified_files_dict = {line.split(',')[0]: line.split(',')[1].replace('"', '').split(',') for line in data_config
-                           if line.split(',')[2].rstrip() == '0'}
+    verified_files_dict = {line.split(',')[0]: line[line.index(',')+1:].rstrip().replace('"', '').split(',')
+                           for line in data_config}
 
     return verified_files_dict
 
@@ -19,8 +19,8 @@ def get_unverified_files_dict():
         data_config = in_file.readlines()
         data_config = data_config[1:]
 
-    unverified_files_dict = {line.split(',')[0]: line.split(',')[1].replace('"', '').split(',') for line in data_config
-                             if line.split(',')[2].rstrip() == '1'}
+    unverified_files_dict = {line.split(',')[0]: line[line.index(',')+1:].rstrip().replace('"', '').split(',')
+                             for line in data_config}
 
     return unverified_files_dict
 
