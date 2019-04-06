@@ -68,13 +68,14 @@ def load_features(filelist, features, num_classes):
             labels = noisy_files_dict[file]
 
         if len(labels) > 1:
-            labels = [label_mapping[l] for l in labels]
-            labels = one_hot_encode(np.asarray(labels), num_classes)
-            y.append(labels)
+            label = [label_mapping[l] for l in labels]
+            label = one_hot_encode(np.asarray(label), num_classes)
         else:
             label = label_mapping[labels[0]]
-            y.append(one_hot_encode(label, num_classes)*len(data))
+            label = one_hot_encode(label, num_classes)
 
+        for i in range(len(data)):
+            y.append(label)
         X.extend(data)
 
     return np.array(X), np.asarray(y)
