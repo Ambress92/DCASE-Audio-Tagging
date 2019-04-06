@@ -2,7 +2,6 @@ from scipy.io import wavfile
 import tqdm
 import numpy as np
 import os
-import tensorflow as tf
 
 def get_verified_files_dict():
     with open('../datasets/train_curated.csv', 'r') as in_file:
@@ -47,15 +46,38 @@ def get_test_files_list():
 
     return test_files
 
-def load_features(filelist):
+def load_features(filelist, features, num_classes):
     # load verified audio clips
-    files = []
+    curated_files_dict = get_verified_files_dict()
+    noisy_files_dict = get_unverified_files_dict()
+    label_mapping, inv_label_mapping = get_label_mapping()
+    X = []
+    y = []
+
     for file in tqdm.tqdm(filelist, 'Loading files'):
-        data = np.load('../features/{}/train_curated/{}.npy'.format(features, file.replace('wav', features)))
+        file = file.rstrip()+'.wav'
+        if file in curated_files_dict.keys():
+            data = np.load(
+                '../features/{}/train_curated/{}.npy'.format(features, file.rstrip().replace('.wav', '')))
 
-        files.append(data)
+            labels = curated_files_dict[file]
+        else:
+            data = np.load(
+                '../features/{}/train_noisy/{}.npy'.format(features, file.rstrip().replace('.wav', '')))
 
-    return files
+            labels = noisy_files_dict[file]
+
+        if len(labels) > 1:
+            labels = [label_mapping[l] for l in labels]
+            labels = one_hot_encode(np.asarray(labels), num_classes)
+            y.append(labels)
+        else:
+            label = label_mapping[labels[0]]
+            y.append(one_hot_encode(label, num_classes)*len(data))
+
+        X.extend(data)
+
+    return np.array(X), np.asarray(y)
 
 
 def load_verified_files(features=None):
@@ -128,10 +150,17 @@ def get_label_mapping():
         train_list = in_file.readlines()
 
     train_list = train_list[1:]
-    labels = np.unique([line.split(',')[1] if not '"' in line else line.replace('"', '').split(',') for line in train_list])
+    single_labels = []
+    labels = [line[line.index(',')+1:].rstrip().replace('"', '').split(',')
+                           for line in train_list]
+    for label in labels:
+        if len(label) > 1:
+            single_labels.extend([l for l in label])
+        else:
+            single_labels.append(label[0])
 
-
-    label_mapping = {label: index for index, label in enumerate(labels)}
+    unique_labels = np.unique(single_labels)
+    label_mapping = {label: index for index, label in enumerate(unique_labels)}
     inv_label_mapping = {v: k for k, v in zip(label_mapping.keys(), label_mapping.values())}
     return label_mapping, inv_label_mapping
 
@@ -153,7 +182,6 @@ def one_hot_encode(label, num_classes):
         Array containing one-hot-encoding, where label-th
         value is set to 1., and remaining values are 0.
     """
-
     encoding = np.zeros((num_classes))
     encoding[label] = 1
     return encoding
