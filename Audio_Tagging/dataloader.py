@@ -3,6 +3,22 @@ import tqdm
 import numpy as np
 import os
 
+def repeat_spectrogram(spec, fixed_length):
+    if spec.shape[1] < fixed_length:
+        while spec.shape[1] < fixed_length:
+            spec = np.concatenate((spec, spec), axis=-1)
+
+    if spec.shape[1] > fixed_length:
+        spec = spec[:, :fixed_length]
+
+    return spec
+
+
+def divide_chunks(l, n):
+    for i in range(0, l.shape[1], n):
+        yield l[:, i:i + n]
+
+
 def get_verified_files_dict():
     with open('../datasets/train_curated.csv', 'r') as in_file:
         data_config = in_file.readlines()
@@ -46,7 +62,7 @@ def get_test_files_list():
 
     return test_files
 
-def load_features(filelist, features, num_classes):
+def load_features(filelist, features, num_classes, fixed_length=3840):
     # load verified audio clips
     curated_files_dict = get_verified_files_dict()
     noisy_files_dict = get_unverified_files_dict()
@@ -67,19 +83,33 @@ def load_features(filelist, features, num_classes):
 
             labels = noisy_files_dict[file]
 
+        if features != 'mfcc':
+            # split the spectrogram into frames
+            data = repeat_spectrogram(data, fixed_length=fixed_length)
+            data = list(divide_chunks(data, fixed_length))
+
         if len(labels) > 1:
             label = [label_mapping[l] for l in labels]
-            label = one_hot_encode(np.asarray(label), num_classes)
         else:
             label = label_mapping[labels[0]]
-            label = one_hot_encode(label, num_classes)
 
+        label = one_hot_encode(np.asarray(label), num_classes)
         for i in range(len(data)):
             y.append(label)
-        X.extend(data)
+        X.extend(np.asarray(data))
 
     return np.array(X), np.asarray(y)
 
+def load_batches(filelist, batchsize, shuffle=False, drop_remainder=False, infinite=False):
+    num_datapoints = len(filelist)
+    if shuffle:
+        np.random.shuffle(filelist)
+
+    rest = (num_datapoints % batchsize)
+    upper_bound = num_datapoints - (rest if drop_remainder else 0)
+    for start_idx in range(0, upper_bound, batchsize):
+        batch = filelist[start_idx: start_idx+batchsize]
+        yield batch
 
 def load_verified_files(features=None):
     verified_files_dict = get_verified_files_dict()
