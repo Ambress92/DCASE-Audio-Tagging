@@ -16,23 +16,27 @@ parser.add_argument('--melspectrogram', action='store_true')
 parser.add_argument('--plot', action='store_true')
 args = parser.parse_args()
 
-def plot_spectrogram(spectrogram, title):
+def plot_spectrogram(spectrogram, title, type):
     print("Spectrogram Shape:", spectrogram.shape)
 
     plt.figure()
-    plt.clf()
     plt.subplots_adjust(right=0.98, left=0.1, bottom=0.1, top=0.99)
-    plt.imshow(spectrogram, origin="lower", interpolation="nearest", cmap="viridis")
-    plt.xlabel("%d frames" % spectrogram.shape[2])
-    plt.ylabel("%d bins" % spectrogram.shape[1])
+    if type == 'mel':
+        plt.imshow(spectrogram[:, :128], origin="lower", interpolation="nearest", cmap="viridis")
+    else:
+        plt.imshow(np.abs(spectrogram[:, :84]), origin='lower', interpolation='nearest', cmap='viridis')
+    plt.xlabel("Time")
+    plt.ylabel("%d bins" % spectrogram.shape[0])
     plt.title(title)
     plt.colorbar()
-    plt.show()
+    plt.tight_layout()
+    plt.gcf().savefig('plots/{}.png'.format(title))
+
 
 def normalize_features(features):
-    features_mean = np.mean(features, axis=1)
-    features_std = np.std(features, axis=1)
-    normalized_features = (features - features_mean[:, np.newaxis]) / features_std[:, np.newaxis]
+    #features_mean = np.mean(features, axis=0)
+    #features_std = np.std(features, axis=0)
+    normalized_features = (features - np.mean(features)) / np.std(features)
     return normalized_features
 
 def dump_cqt_specs(dirname):
@@ -51,16 +55,15 @@ def dump_cqt_specs(dirname):
     for file in tqdm.tqdm(files, 'Extracting stft features'):
         sr, data = wavfile.read('../datasets/{}/{}'.format(dirname, file))
 
-        spec = librosa.cqt(data.astype(np.float), sr=sr)
+        spec = librosa.cqt(data.astype(np.float), sr=sr, n_bins=84)
 
         if args.plot:
-            plot_spectrogram(spec[0], 'CQT Spectrogram')
-            args.plot = False
+            plot_spectrogram(spec, 'CQT Spectrogram frame', 'cqt')
 
         spec = normalize_features(spec)
 
         if args.plot:
-            plot_spectrogram(spec[0], 'CQT Spectrogram Normalized')
+            plot_spectrogram(spec, 'CQT Spectrogram frame Normalized', 'cqt')
             args.plot = False
 
         if not os.path.exists('../features/cqt/{}'.format(dirname)):
@@ -89,7 +92,7 @@ def dump_mel_specs(dirname):
     files = os.listdir('../datasets/{}'.format(dirname))
 
     for file in tqdm.tqdm(files, 'Extracting mel spectrograms'):
-        data, sr = librosa.load('../datasets/{}/{}/{}'.format(args.year, dirname, file), sr=sr, mono=True)
+        data, sr = librosa.load('../datasets/{}/{}'.format(dirname, file), sr=sr, mono=True)
 
 
         stft = librosa.stft(data, n_fft=n_fft, hop_length=hop_length, win_length=None, window='hann', center=True,
@@ -101,14 +104,13 @@ def dump_mel_specs(dirname):
 
 
         if args.plot:
-            plot_spectrogram(spec[0], 'Mel Spectrogram')
-            args.plot = False
+            plot_spectrogram(spec, 'Mel Spectrogram frame', 'mel')
 
         spec = normalize_features(spec)
 
 
         if args.plot:
-            plot_spectrogram(spec[0], 'Mel Spectrogram Normalized')
+            plot_spectrogram(spec, 'Mel Spectrogram frame Normalized', 'mel')
             args.plot = False
 
         if not os.path.exists('../features/cts/{}'.format(dirname)):
