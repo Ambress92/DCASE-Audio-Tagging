@@ -185,23 +185,19 @@ def main():
 
     if args.mfcc:
         if not os.path.exists('../features/mfcc'):
-            os.makedirs('../features/mfcc/test')
-            os.makedirs('../features/mfcc/train')
+            os.makedirs('../features/mfcc/{}'.format(dirname))
         dump_mfcc_features(dirname)
     if args.melspectrogram:
         if not os.path.exists('../features/mel'):
-            os.makedirs('../features/mel/test')
-            os.makedirs('../features/mel/train')
+            os.makedirs('../features/mel/{}'.format(dirname))
         dump_mel_specs(dirname)
     if args.cqt:
         if not os.path.exists('../features/cqt'):
-            os.makedirs('../features/cqt/test')
-            os.makedirs('../features/cqt/train')
+            os.makedirs('../features/cqt/{}'.format(dirname))
         dump_cqt_specs(dirname)
     if args.centroids:
         if not os.path.exists('../features/centroids'):
-            os.makedirs('../features/centroids/test')
-            os.makedirs('../features/centroids/train')
+            os.makedirs('../features/centroids/{}'.format(dirname))
         dump_spectral_centroids(dirname)
 
 if __name__ == '__main__':
