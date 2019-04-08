@@ -70,7 +70,7 @@ def cpjku_2018_cnn(data_format, num_classes):
     # classification block
     model.add(Conv2D(num_classes, (1, 1), strides=1, activation='relu', padding='same'))
     model.add(keras.layers.GlobalAveragePooling2D(data_format='channels_first'))
-    model.add(keras.layers.Activation(activation='softmax'))
+    model.add(keras.layers.Activation(activation='sigmoid'))
 
     print(model.summary())
 

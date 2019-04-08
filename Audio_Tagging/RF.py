@@ -47,12 +47,8 @@ def get_top_predicted_classes(predicted):
 def main():
     label_mapping, inv_label_mapping = get_label_mapping()
     num_classes = len(label_mapping)
-    clf_threshold = 0.45
 
     print('Loading data...')
-
-    file_dict = get_total_file_dict()
-
     with open('../datasets/cv/fold1_train') as in_file:
         filelist_train = in_file.readlines()
 
@@ -63,18 +59,15 @@ def main():
     X_eval, y_eval = load_features(filelist_eval, args.features, num_classes)
 
     print('Load complete')
-    clf = RandomForestClassifier(n_estimators=100, verbose=2, max_depth=None, n_jobs=-1)
+    clf = RandomForestClassifier(n_estimators=20, verbose=2, max_depth=None, n_jobs=-1)
     clf.fit(X_train, y_train)
 
     # load and prep test data
     print('Predicting')
-    predictions = clf.predict_proba(X_eval)
+    predictions = clf.predict(X_eval)
 
     print('Dumping Predictions')
-    predictions = np.asarray([np.argwhere(pred >= clf_threshold) for pred in predictions])
-
-    # dump predictions of RF
-    np.save('predictions/RF_predictions.csv', predictions)
+    np.save('predictions/RF_predictions', predictions)
 
 if __name__ == '__main__':
     main()

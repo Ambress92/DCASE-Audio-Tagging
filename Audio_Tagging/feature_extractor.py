@@ -34,8 +34,6 @@ def plot_spectrogram(spectrogram, title, type):
 
 
 def normalize_features(features):
-    #features_mean = np.mean(features, axis=0)
-    #features_std = np.std(features, axis=0)
     normalized_features = (features - np.mean(features)) / np.std(features)
     return normalized_features
 
@@ -138,11 +136,11 @@ def dump_mfcc_features(dirname):
             mfcc = librosa.feature.mfcc(data.astype(np.float), sr, n_mfcc=40)
         except:
             print('Extraction failed for file {}'.format(file))
+
         deltas = librosa.feature.delta(mfcc)
         delta_delta = librosa.feature.delta(mfcc, order=2)
 
         mfcc = np.vstack((mfcc, deltas, delta_delta))
-
         mfcc = normalize_features(mfcc.T)
 
         if not os.path.exists('../features/mfcc/{}'.format(dirname)):
