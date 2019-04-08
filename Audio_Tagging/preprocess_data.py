@@ -33,11 +33,8 @@ def create_stratified_cv_splits():
     Creates a stratified cross-validation setup and stores a list of files for each fold
     :return:
     """
-    files_curated_dict = get_verified_files_dict()
-    files_noisy_dict = get_unverified_files_dict()
-
-    curated_file_dict = {f:l for f,l in zip(files_curated_dict.keys(), files_curated_dict.values())}
-    noisy_file_dict = {f:l for f,l in zip(files_noisy_dict.keys(), files_noisy_dict.values())}
+    curated_file_dict = get_verified_files_dict()
+    noisy_file_dict = get_unverified_files_dict()
 
     print('Number of curated labels: ', len(curated_file_dict))
     print('Number of noisy labels: ', len(noisy_file_dict))
@@ -88,12 +85,13 @@ def create_stratified_cv_splits():
 
     labels = list(curated_label_dict.keys())
     # randomly shuffle curated and noisy labels
-    overall_dict = {}
+    # overall_dict = {}
     for l in labels:
-        overall_dict[l] = curated_label_dict[l]
-        overall_dict[l].extend(noisy_label_dict[l])
-        np.random.shuffle(overall_dict[l])
-        print("{} Samples for class {} in dictionary".format(len(overall_dict[l]), l))
+        #overall_dict[l] = curated_label_dict[l]
+        #overall_dict[l].extend(noisy_label_dict[l])
+        np.random.shuffle(curated_label_dict[l])
+        np.random.shuffle(noisy_label_dict[l])
+        # print("{} Samples for class {} in dictionary".format(len(overall_dict[l]), l))
 
     if not os.path.exists('../datasets/cv'):
         os.makedirs('../datasets/cv')
@@ -108,10 +106,14 @@ def create_stratified_cv_splits():
 
     folds = [fold1, fold2, fold3, fold4]
     for l in labels:
-        length = int(len(overall_dict[l])/4)+1
-        chunks = list(divide_chunks(overall_dict[l], length))
+        length_curated = int(len(curated_label_dict[l])/4)+1
+        chunks_curated = list(divide_chunks(curated_label_dict[l], length_curated))
+        length_noisy = int(len(noisy_label_dict[l]) / 4) + 1
+        chunks_noisy = list(divide_chunks(noisy_label_dict[l], length_noisy))
         for chunk, fold in enumerate(folds):
-            for file in chunks[chunk]:
+            for file in chunks_curated[chunk]:
+                fold.write(file.replace('.wav', '') + '\n')
+            for file in chunks_noisy[chunk]:
                 fold.write(file.replace('.wav', '') + '\n')
 
     split_train_val()

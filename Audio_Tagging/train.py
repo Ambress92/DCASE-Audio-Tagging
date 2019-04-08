@@ -98,7 +98,7 @@ def main():
             batch_val_loss = []
             batch_val_acc = []
 
-            train_batches = dataloader.load_batches(train_files, cfg['batchsize'], infinite=True)
+            train_batches = dataloader.load_batches(train_files, cfg['batchsize'], infinite=True, shuffle=True)
             train_eval_batches = dataloader.load_batches(train_files, cfg['batchsize'], infinite=False)
             eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False)
 

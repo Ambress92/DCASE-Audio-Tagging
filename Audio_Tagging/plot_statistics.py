@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import argparse
-from dataloader import get_verified_files_dict, get_unverified_files_dict
+from dataloader import get_verified_files_dict, get_unverified_files_dict, get_total_file_dict
 import numpy as np
 from collections import Counter
 
@@ -46,8 +46,55 @@ def plot_class_distribution():
                               counts_unverified[start:start+interval], start, start+interval)
         start += interval
 
+
+def plot_fold_distribution(fold):
+    file_dict = get_total_file_dict()
+    label_dict = {}
+
+    with open('../datasets/cv/fold{}'.format(fold), 'r') as in_file:
+        filelist = in_file.readlines()
+
+    for file in filelist:
+        file = file.rstrip()
+        labels = file_dict[file+'.wav']
+        if len(labels) > 1:
+            label_counts = {}
+            for l in labels:
+                if not l in label_dict.keys():
+                    label_counts[l] = 0
+                else:
+                    label_counts[l] = label_dict[l]
+            # get labels with minimum classes present and append file with multilabel to this class
+            min_element_label = min(label_counts.items(), key=lambda x: x[1])[0]
+
+            if not min_element_label in label_dict.keys():
+                label_dict[min_element_label] = 1
+            else:
+                label_dict[min_element_label] += 1
+        else:
+            label = labels[0]
+            if not label in label_dict.keys():
+                label_dict[label] = 1
+            else:
+                label_dict[label] += 1
+
+    labels = label_dict.keys()
+    plt.figure(figsize=(10, 10))
+    plt.bar(np.arange(len(label_dict)), label_dict.values())
+    plt.xticks(range(len(labels)), labels, rotation='vertical')
+    plt.title('Class distribution of fold {}'.format(fold))
+    plt.xlabel('Classes')
+    plt.ylabel('Frequency')
+    plt.tight_layout()
+    plt.gcf().savefig('plots/class_distribution_fold_{}.png'.format(fold))
+    plt.close()
+
+
+
+
 def main():
-    plot_class_distribution()
+    # plot_class_distribution()
+    plot_fold_distribution(4)
 
 if __name__ == '__main__':
     main()
