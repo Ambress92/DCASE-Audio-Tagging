@@ -48,26 +48,29 @@ def main():
     label_mapping, inv_label_mapping = get_label_mapping()
     num_classes = len(label_mapping)
 
-    print('Loading data...')
-    with open('../datasets/cv/fold1_train') as in_file:
-        filelist_train = in_file.readlines()
+    for fold in range(1,5):
+        print('Loading data...')
+        with open('../datasets/cv/fold{}_train'.format(fold)) as in_file:
+            filelist_train = in_file.readlines()
 
-    with open('../datasets/cv/fold1_eval') as in_file:
-        filelist_eval = in_file.readlines()
+        with open('../datasets/cv/fold{}_eval'.format(fold)) as in_file:
+            filelist_eval = in_file.readlines()
 
-    X_train, y_train = load_features(filelist_train, args.features, num_classes)
-    X_eval, y_eval = load_features(filelist_eval, args.features, num_classes)
+        X_train, y_train = load_features(filelist_train, args.features, num_classes)
+        X_eval, y_eval = load_features(filelist_eval, args.features, num_classes)
 
-    print('Load complete')
-    clf = RandomForestClassifier(n_estimators=20, verbose=2, max_depth=None, n_jobs=-1)
-    clf.fit(X_train, y_train)
+        print('Load complete')
+        clf = RandomForestClassifier(n_estimators=20, verbose=2, max_depth=None, n_jobs=-1)
+        clf.fit(X_train, y_train)
 
-    # load and prep test data
-    print('Predicting')
-    predictions = clf.predict(X_eval)
+        # load and prep test data
+        print('Predicting')
+        predictions = clf.predict(X_eval)
 
-    print('Dumping Predictions')
-    np.save('predictions/RF_predictions', predictions)
+        print('Dumping Predictions and true labels')
+        np.save('predictions/RF_predictions_fold{}'.format(fold), predictions)
+        np.save('predictions/RF_true_labels_fold{}'.format(fold), y_eval)
+
 
 if __name__ == '__main__':
     main()

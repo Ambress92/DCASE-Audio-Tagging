@@ -19,11 +19,10 @@ def opts_parser():
             help='File to load the predictions from (.npz/.pkl format). '
                  'If given multiple times, predictions will be averaged. '
                  'If ending in ":VALUE", will weight by VALUE.')
-    parser.add_argument('--filelist',
-            type=str, default='valid',
-            help='Name of the file list to use (default: %(default)s)')
-    parser.add_argument('--year', default='2019', type=str,
-                        help='year to evaluate on')
+    parser.add_argument('-truth', required=True,
+                        type=str,
+                        help='File to load the true labels from (.npz/.pkl format).')
+
     config.prepare_argument_parser(parser)
     return parser
 
@@ -198,6 +197,24 @@ def plot_results_table(p, r, f, count, id_class_mapping, num_classes, clf):
 
     plt.gcf().savefig('plots/{}_table.pdf'.format(clf))
 
+def save_lwlrap_results_table(lwlrap, labels, weights, clf):
+
+    latex_table = '% !TeX root = initial_structure.tex\n \
+                  \\begin{tabular}{rrr}\n\
+    \\toprule\n\
+         \\multicolumn{1}{c}{CLASS}\n\
+         & \\multicolumn{1}{c}{LWLRAP}\n \
+        & \\multicolumn{l}{c}{WEIGHT}\n \\\\  \
+    \\midrule\n'
+    for c in range(len(labels)):
+        latex_table += "%9s & %.4f & %.4f\\\\\n" % (labels[c], lwlrap[c], weights[c])
+
+    latex_table += "\\\\bottomrule\n\end{tabular}"
+
+    with open('plots/{}_lwlrap_latex_table.tex'.format(clf), "w") as latex_out:
+        latex_out.write(latex_table)
+
+
 def get_top_predicted_classes(predicted):
     """
     Computes the top N predicted classes given the prediction scores for all examples in a clip.
@@ -233,23 +250,12 @@ def print_maps(ap_sums, ap_counts, class_map=None):
     m_ap = map_sum / map_count
     print('Overall MAP: %.4f\n' % m_ap)
 
-def load_true_labels(year, filelist):
-    with open('../datasets/{}/{}'.format(year, filelist), 'r') as in_file:
-        true_labels = in_file.readlines()
-        true_labels = true_labels[1:]
-
-    truth = {line.split(',')[0]: int(line.split(',')[1].rstrip()) for line in true_labels}
-    files = [line.split(',')[0] for line in true_labels]
-    return truth, files
+def load_true_labels(file):
+    return np.load('predictions/{}'.format(file))
 
 
 def load_predictions(infile):
-    with open('predictions/{}'.format(infile), 'r') as in_file:
-        predicted_labels = in_file.readlines()
-        predicted_labels = predicted_labels[1:]
-
-    preds = {line.split(',')[0]: line.split(',')[1].rstrip().split(' ') for line in predicted_labels}
-    return preds
+    return np.load('predictions/{}'.format(infile))
 
 
 def main():
@@ -265,26 +271,31 @@ def main():
     infiles = [infile.rsplit(':', 1)[0] for infile in infiles]
 
     # load and prep test data
-    label_mapping, inv_label_mapping = get_label_mapping(options.year)
+    label_mapping, inv_label_mapping = get_label_mapping()
+    labels = list(label_mapping.keys())
 
     if len(infiles) > 1:
+        # perform late fusion (average, min, max)
         pass
     else:
         preds = load_predictions(infiles[0])
-        truth, files = load_true_labels(options.year, options.filelist)
-        counts = Counter(truth.values())
+        truth = load_true_labels(options.truth)
+        # counts = Counter(truth.values())
 
-        all_predictions = [label_mapping[p] for file in files for p in preds[file]]
-        all_predictions = np.asarray(all_predictions).reshape(-1, 3)
-        best_predictions = [pred[0] for pred in all_predictions]
-        true_labels = [truth[file] for file in files]
+        # all_predictions = [label_mapping[p] for file in files for p in preds[file]]
+        # all_predictions = np.asarray(all_predictions).reshape(-1, 3)
+        # best_predictions = [pred[0] for pred in all_predictions]
+        # true_labels = [truth[file] for file in files]
 
-        p, r, f, s = precision_recall_fscore_support(true_labels, best_predictions)
-        print_precision_recall_fscore(best_predictions, true_labels, inv_label_mapping)
-        plot_results_table(p, r, f, counts, inv_label_mapping, cfg['num_classes'], 'baseline')
-        save_confusion_matrix(best_predictions, true_labels, 'baseline')
-        avg_precisions = np.mean([avg_precision(a, p) for a, p in zip(true_labels, all_predictions)])
-        print('Model {} achieved an average label precision of {}.'.format('baseline', avg_precisions))
+        # p, r, f, s = precision_recall_fscore_support(true_labels, best_predictions)
+        # print_precision_recall_fscore(best_predictions, true_labels, inv_label_mapping)
+        # plot_results_table(p, r, f, counts, inv_label_mapping, cfg['num_classes'], 'baseline')
+        # save_confusion_matrix(best_predictions, true_labels, 'baseline')
+        # avg_precisions = np.mean([avg_precision(a, p) for a, p in zip(true_labels, all_predictions)])
+        per_class_lwlrap, weights = calculate_per_class_lwlrap(truth, preds)
+        lwlrap = calculate_overall_lwlrap_sklearn(truth, preds)
+        save_lwlrap_results_table(per_class_lwlrap, labels, weights, 'RF')
+        print('Model {} achieved an lwlrap of {}.'.format('baseline', lwlrap))
 
 if __name__ == '__main__':
     main()

@@ -18,6 +18,13 @@ def divide_chunks(l, n):
     for i in range(0, l.shape[1], n):
         yield l[:, i:i + n]
 
+def sample_from_spec(spec, frame_size, n_frames):
+    # sample frames of spectrogram randomly across the whole spectrogram
+    frame_range = np.arange(0,spec.shape[1]-frame_size)
+    start_idxs = np.random.choice(frame_range, n_frames)
+    for idx in start_idxs:
+        yield spec[:, idx:frame_size]
+
 
 def get_verified_files_dict():
     with open('../datasets/train_curated.csv', 'r') as in_file:
@@ -62,7 +69,7 @@ def get_test_files_list():
 
     return test_files
 
-def load_features(filelist, features, num_classes, fixed_length=3840):
+def load_features(filelist, features, num_classes, fixed_length=3840, n_frames=10):
     # load verified audio clips
     curated_files_dict = get_verified_files_dict()
     noisy_files_dict = get_unverified_files_dict()
@@ -84,9 +91,14 @@ def load_features(filelist, features, num_classes, fixed_length=3840):
             labels = noisy_files_dict[file]
 
         if features != 'mfcc':
-            # split the spectrogram into frames
-            data = repeat_spectrogram(data, fixed_length=fixed_length)
-            data = list(divide_chunks(data, fixed_length))
+            if data.shape[1] < fixed_length:
+                # repeat spectrogram and split into frames
+                data = repeat_spectrogram(data, fixed_length=fixed_length)
+                data = list(divide_chunks(data, fixed_length))
+            else:
+                #spectrogram is too long - sample frames from spectrogram
+                frame_size = int(fixed_length/n_frames)
+                data = list(sample_from_spec(data, frame_size, n_frames))
 
         if len(labels) > 1:
             label = [label_mapping[l] for l in labels]
