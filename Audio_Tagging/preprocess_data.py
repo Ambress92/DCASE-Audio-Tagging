@@ -24,7 +24,7 @@ def split_train_val():
                 train_out.write(files)
         with open('../datasets/cv/fold{}'.format(eval[i]), 'r') as val_in:
             val_files = val_in.read()
-        with open('../datasets/cv/fold{}_eval'.format(eval[i]), 'w') as val_out:
+        with open('../datasets/cv/fold{}_eval'.format(i+1), 'w') as val_out:
             val_out.write(val_files)
 
 

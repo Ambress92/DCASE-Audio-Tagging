@@ -5,6 +5,7 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import itertools
+import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-features', required=True)
@@ -67,9 +68,25 @@ def main():
         print('Predicting')
         predictions = clf.predict(X_eval)
 
+        y_eval_labels = [np.nonzero(t > 0)[0] for t in y_eval]
+        predictions_labels = [np.nonzero(p > 0)[0] for p in predictions]
+
         print('Dumping Predictions and true labels')
-        np.save('predictions/RF_predictions_fold{}'.format(fold), predictions)
-        np.save('predictions/RF_true_labels_fold{}'.format(fold), y_eval)
+        np.save('predictions/RF_predictions_fold{}'.format(fold), predictions_labels)
+        np.save('predictions/RF_true_labels_fold{}'.format(fold), y_eval_labels)
+
+        # predict on test set
+        test_files = os.listdir('../datasets/test')
+        filelist_test = [file.replace('.wav', '') for file in test_files]
+        X_test, y_test = load_features(filelist_test, args.features, num_classes)
+
+        print('Predicting on test set')
+        predictions = clf.predict(X_test)
+
+        y_test = [np.nonzero(t > 0)[0] for t in predictions]
+        predictions_labels = [np.nonzero(p > 0)[0] for p in y_test]
+        print('Dumping predictions on the test set')
+        np.save('predictions/RF_test_set_fold{}'.format(fold), predictions_labels)
 
 
 if __name__ == '__main__':
