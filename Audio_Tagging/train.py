@@ -48,7 +48,7 @@ def main():
     options = parser.parse_args()
     modelfile = options.modelfile
     cfg = config.from_parsed_arguments(options)
-    keras.backend.set_image_data_format('channels_first')
+    keras.backend.set_image_data_format('channels_last')
 
     verified_files_dict = dataloader.get_verified_files_dict()
     noisy_files_dict = dataloader.get_unverified_files_dict()
@@ -69,7 +69,7 @@ def main():
         # instantiate neural network
         print("Preparing training function...")
 
-        train_formats = (cfg['channels'], cfg['feature_height'], cfg['feature_width'])
+        train_formats = (cfg['feature_height'], cfg['feature_width'], cfg['channels'])
         network = selected_model.architecture(train_formats, cfg['num_classes'])
 
         # Add optimizer and compile model
@@ -108,9 +108,7 @@ def main():
 
                 batch = next(train_batches)
                 X_train, y_train = dataloader.load_features(batch, features='mel', num_classes=cfg['num_classes'])
-
-                X_train = np.asarray(X_train)
-                y_train = np.asarray(y_train)
+                X_train = X_train[:,:,:,np.newaxis]
 
                 metrics = network.train_on_batch(x=X_train, y=y_train)
                 epoch_train_acc.append(metrics[1])
@@ -126,10 +124,9 @@ def main():
 
             for batch_valid in tqdm.tqdm(train_eval_batches, desc='Batch'):
                 X_train, y_train = dataloader.load_features(batch_valid, features='mel', num_classes=cfg['num_classes'])
+                X_train = X_train[:, :, :, np.newaxis]
 
-                network.test_on_batch(x=X_train, y=y_train, batch_size=cfg['batch_size'], verbose=0)
-
-                preds = network.predict(X_train, batch_size=cfg['batch_size'], verbose=0)
+                preds = network.predict(X_train, batch_size=cfg['batchsize'], verbose=0)
                 predictions.extend(preds)
                 truth.extend(y_train)
 
@@ -144,12 +141,13 @@ def main():
 
             for batch_valid in tqdm.tqdm(eval_batches, desc='Batch'):
                 X_test, y_test = dataloader.load_features(batch_valid, features='mel', num_classes=cfg['num_classes'])
+                X_test = X_test[:, :, :, np.newaxis]
 
-                metrics = network.test_on_batch(x=X_test, y=y_test, batch_size=cfg['batch_size'], verbose=0)
+                metrics = network.test_on_batch(x=X_test, y=y_test, batch_size=cfg['batchsize'], verbose=0)
 
                 batch_val_loss.append(metrics[0])
                 batch_val_acc.append(metrics[1])
-                preds = network.predict(X_test, batch_size=cfg['batch_size'], verbose=0)
+                preds = network.predict(X_test, batch_size=cfg['batchsize'], verbose=0)
                 predictions.extend(preds)
                 truth.extend(y_test)
 
@@ -168,7 +166,7 @@ def main():
                 if epoch_lwlrap_eval > np.amax(lwlraps_eval):
                     epochs_without_decrase = 0
                     print("Average lwlrap increased - Saving weights...\n")
-                    network.save_weights("models/baselin.hd5")
+                    network.save_weights("models/baseline.hd5")
                 elif not cfg['linear_decay']:
                     epochs_without_decrase += 1
                     if epochs_without_decrase == cfg['epochs_without_decrease']:

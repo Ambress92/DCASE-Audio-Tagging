@@ -69,7 +69,7 @@ def get_test_files_list():
 
     return test_files
 
-def load_features(filelist, features, num_classes, fixed_length=3840, n_frames=10):
+def load_features(filelist, features, num_classes, fixed_length=3480, n_frames=10):
     # load verified audio clips
     curated_files_dict = get_verified_files_dict()
     noisy_files_dict = get_unverified_files_dict()
@@ -94,7 +94,7 @@ def load_features(filelist, features, num_classes, fixed_length=3840, n_frames=1
             if data.shape[1] < fixed_length:
                 # repeat spectrogram and split into frames
                 data = repeat_spectrogram(data, fixed_length=fixed_length)
-                data = list(divide_chunks(data, fixed_length))
+                data = list(divide_chunks(data, int(fixed_length/n_frames)))
             else:
                 #spectrogram is too long - sample frames from spectrogram
                 frame_size = int(fixed_length/n_frames)
@@ -110,7 +110,7 @@ def load_features(filelist, features, num_classes, fixed_length=3840, n_frames=1
             y.append(label)
         X.extend(np.asarray(data))
 
-    return np.array(X), np.asarray(y)
+    return np.asarray(X), np.asarray(y)
 
 def load_batches(filelist, batchsize, shuffle=False, drop_remainder=False, infinite=False):
     num_datapoints = len(filelist)
