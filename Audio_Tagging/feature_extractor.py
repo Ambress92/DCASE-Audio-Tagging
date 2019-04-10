@@ -65,8 +65,9 @@ def dump_cqt_specs(dirname):
         try:
             spec = librosa.cqt(data.astype(np.float), sr=sr, n_bins=84)
         except:
-            print('File could not be converted: ', file)
-
+            print('File was clipped to zero length - using original file: ', file)
+            sr, data = wavfile.read('../datasets/{}/{}'.format(dirname, file))
+            spec = librosa.cqt(data.astype(np.float), sr=sr, n_bins=84)
 
         spec = np.abs(spec)
 
@@ -123,7 +124,10 @@ def dump_mel_specs(dirname):
             stft = librosa.stft(data, n_fft=n_fft, hop_length=hop_length, win_length=None, window='hann', center=True,
                                 pad_mode='reflect')
         except:
-            print('File could not be converted: {}'.format(aug_audio_file))
+            print('File was clipped to zero length - extracting non-clipped file: {}'.format(aug_audio_file))
+            data, sr = librosa.load('../datasets/{}/{}'.format(dirname, file), sr=sr, mono=True)
+            stft = librosa.stft(data, n_fft=n_fft, hop_length=hop_length, win_length=None, window='hann', center=True,
+                                pad_mode='reflect')
 
         stft = np.abs(stft)
         stft = np.log10(stft+1)
