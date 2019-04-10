@@ -41,47 +41,51 @@ def create_stratified_cv_splits():
 
     curated_label_dict = {}
     for file, labels in curated_file_dict.items():
-        if len(labels) > 1:
-            label_counts = {}
-            for l in labels:
-                if not l in curated_label_dict.keys():
-                    label_counts[l] = 0
+        # discard files that were empty after silence clipping and did not yield any spectrograms
+        if os.path.exists('../features/mel/train_curated/{}'.format(file.replace('.wav', '.npy'))):
+            if len(labels) > 1:
+                label_counts = {}
+                for l in labels:
+                    if not l in curated_label_dict.keys():
+                        label_counts[l] = 0
+                    else:
+                        label_counts[l] = len(curated_label_dict[l])
+                # get labels with minimum classes present and append file with multilabel to this class
+                min_element_label = min(label_counts.items(), key=lambda x: x[1])[0]
+                if not min_element_label in curated_label_dict.keys():
+                    curated_label_dict[min_element_label] = [file]
                 else:
-                    label_counts[l] = len(curated_label_dict[l])
-            # get labels with minimum classes present and append file with multilabel to this class
-            min_element_label = min(label_counts.items(), key=lambda x: x[1])[0]
-            if not min_element_label in curated_label_dict.keys():
-                curated_label_dict[min_element_label] = [file]
+                    curated_label_dict[min_element_label].append(file)
             else:
-                curated_label_dict[min_element_label].append(file)
-        else:
-            label = labels[0]
-            if not label in curated_label_dict.keys():
-                curated_label_dict[label] = [file]
-            else:
-                curated_label_dict[label].append(file)
+                label = labels[0]
+                if not label in curated_label_dict.keys():
+                    curated_label_dict[label] = [file]
+                else:
+                    curated_label_dict[label].append(file)
 
     noisy_label_dict = {}
     for file, labels in noisy_file_dict.items():
-        if len(labels) > 1:
-            label_counts = {}
-            for l in labels:
-                if not l in noisy_label_dict.keys():
-                    label_counts[l] = 0
+        # discard files that were empty after silence clipping and did not yield any spectrograms
+        if os.path.exists('../features/mel/train_noisy/{}'.format(file.replace('.wav', '.npy'))):
+            if len(labels) > 1:
+                label_counts = {}
+                for l in labels:
+                    if not l in noisy_label_dict.keys():
+                        label_counts[l] = 0
+                    else:
+                        label_counts[l] = len(noisy_label_dict[l])
+                # get labels with minimum classes present and append file with multilabel to this class
+                min_element_label = min(label_counts.items(), key=lambda x: x[1])[0]
+                if not min_element_label in noisy_label_dict.keys():
+                    noisy_label_dict[min_element_label] = [file]
                 else:
-                    label_counts[l] = len(noisy_label_dict[l])
-            # get labels with minimum classes present and append file with multilabel to this class
-            min_element_label = min(label_counts.items(), key=lambda x: x[1])[0]
-            if not min_element_label in noisy_label_dict.keys():
-                noisy_label_dict[min_element_label] = [file]
+                    noisy_label_dict[min_element_label].append(file)
             else:
-                noisy_label_dict[min_element_label].append(file)
-        else:
-            label = labels[0]
-            if not label in noisy_label_dict.keys():
-                noisy_label_dict[label] = [file]
-            else:
-                noisy_label_dict[label].append(file)
+                label = labels[0]
+                if not label in noisy_label_dict.keys():
+                    noisy_label_dict[label] = [file]
+                else:
+                    noisy_label_dict[label].append(file)
 
     labels = list(curated_label_dict.keys())
     # randomly shuffle curated and noisy labels
