@@ -1,6 +1,6 @@
 import numpy as np
 from dataloader import get_label_mapping
-from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
+from sklearn.metrics import precision_recall_fscore_support, confusion_matrix
 import matplotlib.pyplot as plt
 import itertools
 from collections import Counter
@@ -138,10 +138,9 @@ def save_confusion_matrix(predictions, true_labels, model, normalize=False):
     plt.xlabel('Predicted label')
     plt.gcf().savefig('plots/confusion_matrix_{}.png'.format(model))
 
-def print_precision_recall_fscore(predictions, true_labels, label_mapping):
+def print_precision_recall_fscore(predictions, true_labels, counts, label_mapping):
     p,r,f,s = precision_recall_fscore_support(true_labels, predictions)
-    counts = Counter(true_labels)
-    num_classes = len(np.unique(true_labels))
+    num_classes = len(counts)
 
     print("\n")
     print("%9s  |   %s  |  %4s  |  %4s  |   %4s   |" % ("CLASS", "CNT", "PR ", "RE ", "F1 "))
@@ -279,23 +278,23 @@ def main():
         pass
     else:
         preds = load_predictions(infiles[0])
+        prediction_labels = [inv_label_mapping[l] for p in preds for l in np.nonzero(p > 0)[0]]
+        prediction_counts = Counter(prediction_labels)
         truth = load_true_labels(options.truth)
-        # counts = Counter(truth.values())
+        true_labels = [inv_label_mapping[l] for t in truth for l in np.nonzero(t > 0)[0]]
+        true_counts = Counter(true_labels)
 
-        # all_predictions = [label_mapping[p] for file in files for p in preds[file]]
-        # all_predictions = np.asarray(all_predictions).reshape(-1, 3)
-        # best_predictions = [pred[0] for pred in all_predictions]
-        # true_labels = [truth[file] for file in files]
-
-        # p, r, f, s = precision_recall_fscore_support(true_labels, best_predictions)
-        # print_precision_recall_fscore(best_predictions, true_labels, inv_label_mapping)
-        # plot_results_table(p, r, f, counts, inv_label_mapping, cfg['num_classes'], 'baseline')
-        # save_confusion_matrix(best_predictions, true_labels, 'baseline')
-        # avg_precisions = np.mean([avg_precision(a, p) for a, p in zip(true_labels, all_predictions)])
+        p, r, f, s = precision_recall_fscore_support(truth, preds)
+        print_precision_recall_fscore(preds, truth, true_counts, inv_label_mapping)
+        plot_results_table(p, r, f, true_counts, inv_label_mapping, cfg['num_classes'], 'baseline')
+        # with sklearn 0.21 a multilabel confusion matrix was added
+        # save_confusion_matrix(preds, truth, 'RF')
+        avg_precisions = np.mean([avg_precision(a, p) for a, p in zip(true_labels, preds)])
+        print('Average precision: {}'.format(avg_precisions))
         per_class_lwlrap, weights = calculate_per_class_lwlrap(truth, preds)
         lwlrap = calculate_overall_lwlrap_sklearn(truth, preds)
         save_lwlrap_results_table(per_class_lwlrap, labels, weights, 'RF')
-        print('Model {} achieved an lwlrap of {}.'.format('baseline', lwlrap))
+        print('Model {} achieved an lwlrap of {}.'.format('RF', lwlrap))
 
 if __name__ == '__main__':
     main()
