@@ -84,11 +84,14 @@ def load_features(filelist, features, num_classes, fixed_length=3480, n_frames=1
                 '../features/{}/train_curated/{}.npy'.format(features, file.rstrip().replace('.wav', '')))
 
             labels = curated_files_dict[file]
-        else:
+        elif file in noisy_files_dict.keys():
             data = np.load(
                 '../features/{}/train_noisy/{}.npy'.format(features, file.rstrip().replace('.wav', '')))
 
             labels = noisy_files_dict[file]
+        else:
+            data = np.load(
+                '../features/{}/test/{}.npy'.format(features, file.rstrip().replace('.wav', '')))
 
         if features != 'mfcc':
             if data.shape[1] < fixed_length:
