@@ -23,7 +23,7 @@ def sample_from_spec(spec, frame_size, n_frames):
     frame_range = np.arange(0,spec.shape[1]-frame_size)
     start_idxs = np.random.choice(frame_range, n_frames)
     for idx in start_idxs:
-        yield spec[:, idx:frame_size]
+        yield spec[:, idx:idx+frame_size]
 
 
 def get_verified_files_dict():
@@ -115,7 +115,7 @@ def load_features(filelist, features, num_classes, fixed_length=3480, n_frames=1
     X = []
     y = []
 
-    for file in tqdm.tqdm(filelist, 'Loading files'):
+    for file in filelist:
         file = file.rstrip()+'.wav'
         if file in curated_files_dict.keys():
             data = np.load(

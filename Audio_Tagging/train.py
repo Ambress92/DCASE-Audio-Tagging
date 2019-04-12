@@ -28,7 +28,7 @@ def save_learning_curve(metric, val_metric, filename, title, ylabel):
     plt.legend(['train', 'validation'], loc='upper left')
     plt.grid("on")
     plt.ylim([0, 1.05])
-    plt.savefig(filename)
+    plt.savefig('plots/' + filename)
     plt.close()
 
 
@@ -130,7 +130,7 @@ def main():
                 predictions.extend(preds)
                 truth.extend(y_train)
 
-            epoch_lwlrap_train = calculate_overall_lwlrap_sklearn(y_test, truth)
+            epoch_lwlrap_train = calculate_overall_lwlrap_sklearn(np.asarray(predictions), np.asarray(truth))
             lwlraps_train.append(epoch_lwlrap_train)
 
             print('Label weighted label ranking average precision on training set after epoch {}: {}'.format(epoch,
@@ -143,7 +143,7 @@ def main():
                 X_test, y_test = dataloader.load_features(batch_valid, features='mel', num_classes=cfg['num_classes'])
                 X_test = X_test[:, :, :, np.newaxis]
 
-                metrics = network.test_on_batch(x=X_test, y=y_test, batch_size=cfg['batchsize'], verbose=0)
+                metrics = network.test_on_batch(x=X_test, y=y_test)
 
                 batch_val_loss.append(metrics[0])
                 batch_val_acc.append(metrics[1])
@@ -151,7 +151,7 @@ def main():
                 predictions.extend(preds)
                 truth.extend(y_test)
 
-            epoch_lwlrap_eval = calculate_overall_lwlrap_sklearn(y_test, truth)
+            epoch_lwlrap_eval = calculate_overall_lwlrap_sklearn(np.asarray(predictions), np.asarray(truth))
             lwlraps_eval.append(epoch_lwlrap_eval)
 
             print('Loss on validation set after epoch {}: {}'.format(epoch, np.mean(batch_val_loss)))
@@ -166,7 +166,7 @@ def main():
                 if epoch_lwlrap_eval > np.amax(lwlraps_eval):
                     epochs_without_decrase = 0
                     print("Average lwlrap increased - Saving weights...\n")
-                    network.save_weights("models/baseline.hd5")
+                    network.save_weights("models/baseline_fold{}.hd5".format(fold))
                 elif not cfg['linear_decay']:
                     epochs_without_decrase += 1
                     if epochs_without_decrase == cfg['epochs_without_decrease']:
@@ -183,6 +183,9 @@ def main():
                         lr = lr - cfg['lr_decrease']
                         keras.backend.set_value(network.optimizer.lr, lr)
                         print("Decreasing learning rate by {}...".format(cfg['lr_decrease']))
+            else:
+                print("Average lwlrap increased - Saving weights...\n")
+                network.save_weights("models/baseline_fold{}.hd5".format(fold))
 
             # Save loss and learning curve of trained model
             save_learning_curve(train_acc, val_acc, "baseline_accuracy_learning_curve.pdf", 'Accuracy', 'Accuracy')
