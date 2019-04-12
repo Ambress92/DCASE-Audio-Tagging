@@ -69,6 +69,44 @@ def get_test_files_list():
 
     return test_files
 
+
+def load_test_features(filelist, features, fixed_length=3480, n_frames=10):
+    """
+        Loads and returns test audio files.
+
+        Parameters
+        ----------
+        year : int
+            Which year the data is to be taken from.
+        features : String
+            String containing name of feature that should be loaded.
+            If 'None', raw data is loaded.
+
+        Returns
+        -------
+        test_files : List of Tuples
+            List containing (data, label) tupels for all test audio clips.
+    """
+    X = []
+    for file in filelist:
+        data = np.load(
+            '../features/{}/test/{}.npy'.format(features, file.rstrip().replace('.wav', '')))
+
+        if features != 'mfcc':
+            if data.shape[1] < fixed_length:
+                # repeat spectrogram and split into frames
+                data = repeat_spectrogram(data, fixed_length=fixed_length)
+                data = list(divide_chunks(data, int(fixed_length / n_frames)))
+            else:
+                # spectrogram is too long - sample frames from spectrogram
+                frame_size = int(fixed_length / n_frames)
+                data = list(sample_from_spec(data, frame_size, n_frames))
+
+        X.extend(np.asarray(data))
+
+    return np.asarray(X)
+
+    
 def load_features(filelist, features, num_classes, fixed_length=3480, n_frames=10):
     # load verified audio clips
     curated_files_dict = get_verified_files_dict()
@@ -84,15 +122,12 @@ def load_features(filelist, features, num_classes, fixed_length=3480, n_frames=1
                 '../features/{}/train_curated/{}.npy'.format(features, file.rstrip().replace('.wav', '')))
 
             labels = curated_files_dict[file]
-        elif file in noisy_files_dict.keys():
+        else:
             data = np.load(
                 '../features/{}/train_noisy/{}.npy'.format(features, file.rstrip().replace('.wav', '')))
 
             labels = noisy_files_dict[file]
-        else:
-            data = np.load(
-                '../features/{}/test/{}.npy'.format(features, file.rstrip().replace('.wav', '')))
-
+        
         if features != 'mfcc':
             if data.shape[1] < fixed_length:
                 # repeat spectrogram and split into frames
@@ -156,40 +191,6 @@ def load_unverified_files(features=None):
         unverified_files.append((data, label))
 
     return unverified_files
-
-def load_test_files(features=None):
-    """
-    Loads and returns test audio files of given year.
-
-    Parameters
-    ----------
-    year : int
-        Which year the data is to be taken from.
-    features : String
-        String containing name of feature that should be loaded.
-        If 'None', raw data is loaded.
-
-    Returns
-    -------
-    test_files : List of Tuples
-        List containing (data, label) tupels for all test audio clips.
-    """
-    files = get_test_files_list()
-
-    # load test clips
-    test_files = []
-    for file in tqdm.tqdm(files, 'Loading test clips'):
-        if not features:
-            _, data = wavfile.read('../datasets/test/{}'.format(file))
-        else:
-            if not os.path.exists('../features/{}/audio_test'.format(features)):
-                print('\nPlease extract features prior to loading!\n')
-                return
-            data = np.load('../features/{}/audio_test/{}.npy'.format(features, file.replace('wav', features)))
-
-        test_files.append(data)
-
-    return test_files
 
 def get_label_mapping():
     with open('../datasets/train_curated.csv', 'r') as in_file:
