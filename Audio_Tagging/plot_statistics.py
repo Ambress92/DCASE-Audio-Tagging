@@ -1,8 +1,54 @@
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import argparse
 from dataloader import get_verified_files_dict, get_unverified_files_dict, get_total_file_dict
 import numpy as np
 from collections import Counter
+from scipy.io import wavfile
+import os
+
+def plot_spectrogram_lengths(feature, path, idx):
+    """
+    Plots and saves the lengths of different features in a histogram.
+
+    Parameters
+    ----------
+    feature : string
+        Name of feature we take a look at, used for plotting
+        and resulting file-name. If we want to plot raw data,
+        this string should contain 'raw'.
+    path : string
+        Path to the directory containing curated and noisy
+        folders of the features we want to plot lengths of.
+    idx : int
+        Index of length of interest within the shape of the feature.
+    """
+    lengths = []
+    if 'raw' in feature.lower():
+        for file in os.listdir(path+'/train_curated/'):
+            _, data = wavfile.read(path+'/train_curated/'+file)
+            lengths.append(data.shape)
+        for file in os.listdir(path+'/train_noisy/'):
+            _, data = wavfile.read(path+'/train_noisy/'+file)
+            lengths.append(data.shape)
+    else:
+        for file in os.listdir(path+'/train_curated/'):
+            lengths.append(np.load(path+'/train_curated/'+file).shape)
+        for file in os.listdir(path+'/train_noisy/'):
+            lengths.append(np.load(path+'/train_noisy/'+file).shape)
+    lengths = np.asarray(lengths)
+    plt.figure(figsize=(10,10))
+    plt.xlabel('Lenghts')
+    plt.ylabel('Occurences')
+    plt.title('Distribution of {} lengths'.format(feature))
+    n, bins, patches = plt.hist(lengths[:, idx], color=cm.get_cmap('viridis')(0.))
+    plt.axvline(x=np.median(lengths[:, idx]), color=cm.get_cmap('viridis')(1.), linestyle='dashed', linewidth=2)
+    print('Maximum: ' + str(max(lengths[:, idx])))
+    print('Minimum: ' + str(min(lengths[:, idx])))
+    print('Median: ' + str(np.median(lengths[:, idx])))
+    plt.gcf().savefig('plots/{}_lengths.png'.format(feature))
+    plt.close()
+
 
 def save_stacked_bar_plot(counts_verified, labels_verified, counts_unverified, start, end, exp_name):
     plt.figure(figsize=(10,10))
@@ -156,4 +202,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
