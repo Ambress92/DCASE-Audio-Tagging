@@ -9,6 +9,7 @@ import config
 import tqdm
 from evaluate import calculate_overall_lwlrap_sklearn
 import matplotlib.pyplot as plt
+import pdb
 
 def opts_parser():
     descr = "Trains a neural network."
@@ -49,7 +50,7 @@ def main():
     modelfile = options.modelfile
     cfg = config.from_parsed_arguments(options)
     keras.backend.set_image_data_format('channels_last')
-    clf_threshold=0.95
+    clf_delta = 0.05
 
     verified_files_dict = dataloader.get_verified_files_dict()
     noisy_files_dict = dataloader.get_unverified_files_dict()
@@ -133,10 +134,13 @@ def main():
             X_train = X_train[:, :, :, np.newaxis]
 
             preds = network.predict(X_train, batch_size=cfg['batchsize'], verbose=0)
-            preds = dataloader.one_hot_encode(np.nonzero(preds > clf_threshold)[0])
-            predictions.extend(preds)
+            for p in preds:
+                clf_threshold = np.max(p)-clf_delta
+                p = dataloader.one_hot_encode(np.nonzero(p > clf_threshold)[0], cfg['num_classes'])
+                predictions.append(p)
             truth.extend(y_train)
 
+        pdb.set_trace()
         epoch_lwlrap_train = calculate_overall_lwlrap_sklearn(np.asarray(predictions), np.asarray(truth))
         lwlraps_train.append(epoch_lwlrap_train)
 
@@ -155,8 +159,10 @@ def main():
             batch_val_loss.append(metrics[0])
             batch_val_acc.append(metrics[1])
             preds = network.predict(X_test, batch_size=cfg['batchsize'], verbose=0)
-            preds = dataloader.one_hot_encode(np.nonzero(preds > clf_threshold)[0])
-            predictions.extend(preds)
+            for p in preds:
+                clf_threshold = np.max(p) - clf_delta
+                p = dataloader.one_hot_encode(np.nonzero(p > clf_threshold)[0], cfg['num_classes'])
+                predictions.append(p)
             truth.extend(y_test)
 
         epoch_lwlrap_eval = calculate_overall_lwlrap_sklearn(np.asarray(predictions), np.asarray(truth))
