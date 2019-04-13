@@ -16,16 +16,17 @@ def split_train_val():
     """
     splits = [[1, 2, 3], [2, 3, 4], [1, 2, 4], [1, 3, 4]]
     eval = [4,1,3,2]
-    for i, split in enumerate(splits):
-        with open('../datasets/cv/fold{}_train'.format(i + 1), 'w') as train_out:
-            for fold in split:
-                with open('../datasets/cv/fold{}'.format(fold), 'r') as in_file:
-                    files = in_file.read()
-                train_out.write(files)
-        with open('../datasets/cv/fold{}'.format(eval[i]), 'r') as val_in:
-            val_files = val_in.read()
-        with open('../datasets/cv/fold{}_eval'.format(i+1), 'w') as val_out:
-            val_out.write(val_files)
+    for set in ['curated', 'noisy']:
+        for i, split in enumerate(splits):
+            with open('../datasets/cv/fold{}_{}_train'.format(i + 1, set), 'w') as train_out:
+                for fold in split:
+                    with open('../datasets/cv/fold{}_{}'.format(fold, set), 'r') as in_file:
+                        files = in_file.read()
+                    train_out.write(files)
+            with open('../datasets/cv/fold{}_{}'.format(eval[i], set), 'r') as val_in:
+                val_files = val_in.read()
+            with open('../datasets/cv/fold{}_{}_eval'.format(i+1, set), 'w') as val_out:
+                val_out.write(val_files)
 
 
 def create_stratified_cv_splits():
@@ -100,25 +101,20 @@ def create_stratified_cv_splits():
     if not os.path.exists('../datasets/cv'):
         os.makedirs('../datasets/cv')
 
-    try:
-        fold1 = open('../datasets/cv/fold1', 'w')
-        fold2 = open('../datasets/cv/fold2', 'w')
-        fold3 = open('../datasets/cv/fold3', 'w')
-        fold4 = open('../datasets/cv/fold4', 'w')
-    except:
-        print('Could not create cv files!')
-
-    folds = [fold1, fold2, fold3, fold4]
     for l in labels:
         length_curated = int(len(curated_label_dict[l])/4)+1
         chunks_curated = list(divide_chunks(curated_label_dict[l], length_curated))
         length_noisy = int(len(noisy_label_dict[l]) / 4) + 1
         chunks_noisy = list(divide_chunks(noisy_label_dict[l], length_noisy))
-        for chunk, fold in enumerate(folds):
+        for f, chunk in enumerate(range(4)):
             for file in chunks_curated[chunk]:
-                fold.write(file.replace('.wav', '') + '\n')
+                with open('../datasets/cv/fold{}_curated'.format(f+1), 'a+') as out_file:
+                    out_file.write(file.replace('.wav', '') + '\n')
+
             for file in chunks_noisy[chunk]:
-                fold.write(file.replace('.wav', '') + '\n')
+                with open('../datasets/cv/fold{}_noisy'.format(f+1), 'a+') as out_file:
+                        out_file.write(file.replace('.wav', '') + '\n')
+
 
     split_train_val()
 
