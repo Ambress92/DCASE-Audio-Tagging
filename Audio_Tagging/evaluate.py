@@ -8,6 +8,7 @@ from argparse import ArgumentParser
 import config
 import os
 import sklearn.metrics
+import dataloader
 
 TOP_N = 3
 
@@ -277,21 +278,25 @@ def main():
         # perform late fusion (average, min, max)
         pass
     else:
-        preds = load_predictions(infiles[0])
-        prediction_labels = [inv_label_mapping[l] for p in preds for l in np.nonzero(p > 0)[0]]
+        preds_load = load_predictions(infiles[0])
+        prediction_labels = [inv_label_mapping[l] for p in preds_load for l in np.nonzero(p > 0)[0]]
         prediction_counts = Counter(prediction_labels)
-        truth = load_true_labels(options.truth)
-        true_labels = [inv_label_mapping[l] for t in truth for l in np.nonzero(t > 0)[0]]
+        preds = [dataloader.one_hot_encode(p, 80) for p in preds_load]
+        truth_load = load_true_labels(options.truth)
+        true_labels = [inv_label_mapping[l] for t in truth_load for l in np.nonzero(t > 0)[0]]
         true_counts = Counter(true_labels)
+        truth = [dataloader.one_hot_encode(t, 80) for t in truth_load]
+        truth = np.asarray(truth)
+        preds = np.asarray(preds)
 
-        p, r, f, s = precision_recall_fscore_support(truth, preds)
-        print_precision_recall_fscore(preds, truth, true_counts, inv_label_mapping)
-        plot_results_table(p, r, f, true_counts, inv_label_mapping, cfg['num_classes'], 'baseline')
+        # p, r, f, s = precision_recall_fscore_support(truth, preds)
+        # print_precision_recall_fscore(preds, truth, true_counts, inv_label_mapping)
+        # plot_results_table(p, r, f, true_counts, inv_label_mapping, cfg['num_classes'], 'baseline')
         # with sklearn 0.21 a multilabel confusion matrix was added
         # save_confusion_matrix(preds, truth, 'RF')
-        avg_precisions = np.mean([avg_precision(a, p) for a, p in zip(true_labels, preds)])
-        print('Average precision: {}'.format(avg_precisions))
-        per_class_lwlrap, weights = calculate_per_class_lwlrap(truth, preds)
+        # avg_precisions = np.mean([avg_precision(a, p) for a, p in zip(true_labels, preds)])
+        # print('Average precision: {}'.format(avg_precisions))
+        per_class_lwlrap, weights = calculate_per_class_lwlrap(np.asarray(truth), np.asarray(preds))
         lwlrap = calculate_overall_lwlrap_sklearn(truth, preds)
         save_lwlrap_results_table(per_class_lwlrap, labels, weights, 'RF')
         print('Model {} achieved an lwlrap of {}.'.format('RF', lwlrap))

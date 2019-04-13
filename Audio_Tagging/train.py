@@ -49,6 +49,7 @@ def main():
     modelfile = options.modelfile
     cfg = config.from_parsed_arguments(options)
     keras.backend.set_image_data_format('channels_last')
+    clf_threshold=0.95
 
     verified_files_dict = dataloader.get_verified_files_dict()
     noisy_files_dict = dataloader.get_unverified_files_dict()
@@ -57,11 +58,15 @@ def main():
 
     print('Loading data...')
     #for fold in range(1,5):
-    # add data loading here
-    with open('../datasets/cv/fold{}_train'.format(fold), 'r') as in_file:
-        train_files = in_file.readlines()
-    with open('../datasets/cv/fold{}_eval'.format(fold), 'r') as in_file:
-        eval_files = in_file.readlines()
+    train_files = []
+    eval_files = []
+    with open('../datasets/cv/fold{}_curated_train'.format(fold), 'r') as in_file:
+        train_files.extend(in_file.readlines())
+    with open('../datasets/cv/fold{}_noisy_train'.format(fold), 'r') as in_file:
+        train_files.extend(in_file.readlines())
+
+    with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
+        eval_files.extend(in_file.readlines())
 
     print('Loading model')
     # import model from file
@@ -128,6 +133,7 @@ def main():
             X_train = X_train[:, :, :, np.newaxis]
 
             preds = network.predict(X_train, batch_size=cfg['batchsize'], verbose=0)
+            preds = dataloader.one_hot_encode(np.nonzero(preds > clf_threshold)[0])
             predictions.extend(preds)
             truth.extend(y_train)
 
@@ -149,6 +155,7 @@ def main():
             batch_val_loss.append(metrics[0])
             batch_val_acc.append(metrics[1])
             preds = network.predict(X_test, batch_size=cfg['batchsize'], verbose=0)
+            preds = dataloader.one_hot_encode(np.nonzero(preds > clf_threshold)[0])
             predictions.extend(preds)
             truth.extend(y_test)
 

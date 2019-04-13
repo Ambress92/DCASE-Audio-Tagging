@@ -107,7 +107,7 @@ def load_test_features(filelist, features, fixed_length=3480, n_frames=10):
     return np.asarray(X)
 
     
-def load_features(filelist, features, num_classes, fixed_length=3480, n_frames=10):
+def load_features(filelist, features, num_classes, fixed_length=3132, n_frames=9):
     # load verified audio clips
     curated_files_dict = get_verified_files_dict()
     noisy_files_dict = get_unverified_files_dict()

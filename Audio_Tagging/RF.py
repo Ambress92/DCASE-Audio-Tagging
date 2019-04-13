@@ -68,12 +68,9 @@ def main():
         print('Predicting')
         predictions = clf.predict(X_eval)
 
-        y_eval_labels = [np.nonzero(t > 0)[0] for t in y_eval]
-        predictions_labels = [np.nonzero(p > 0)[0] for p in predictions]
-
         print('Dumping Predictions and true labels')
-        np.save('predictions/RF_predictions_fold{}'.format(fold), predictions_labels)
-        np.save('predictions/RF_true_labels_fold{}'.format(fold), y_eval_labels)
+        np.save('predictions/RF_predictions_fold{}'.format(fold), predictions)
+        np.save('predictions/RF_true_labels_fold{}'.format(fold), y_eval)
 
         # predict on test set
         test_files = os.listdir('../datasets/test')
