@@ -70,7 +70,7 @@ def get_test_files_list():
     return test_files
 
 
-def load_test_features(filelist, features, fixed_length=3480, n_frames=10):
+def load_test_features(filelist, features, fixed_length=3132, n_frames=9):
     """
         Loads and returns test audio files.
 
@@ -150,7 +150,7 @@ def load_features(filelist, features, num_classes, fixed_length=3132, n_frames=9
 
     return np.asarray(X), np.asarray(y)
 
-def load_batches(filelist, batchsize, shuffle=False, drop_remainder=False, infinite=False):
+def load_batches(filelist, batchsize, shuffle=False, drop_remainder=False):
     num_datapoints = len(filelist)
     if shuffle:
         np.random.shuffle(filelist)

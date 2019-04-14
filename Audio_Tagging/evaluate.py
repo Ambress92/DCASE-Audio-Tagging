@@ -278,6 +278,8 @@ def main():
         # perform late fusion (average, min, max)
         pass
     else:
+        clf_delta = 0.05
+        exp_name = infiles[0].split('_')[0]+'_'+infiles[0].split('_')[2]
         preds_load = load_predictions(infiles[0])
         prediction_labels = [inv_label_mapping[l] for p in preds_load for l in np.nonzero(p > 0)[0]]
         prediction_counts = Counter(prediction_labels)
@@ -289,17 +291,43 @@ def main():
         truth = np.asarray(truth)
         preds = np.asarray(preds)
 
-        # p, r, f, s = precision_recall_fscore_support(truth, preds)
-        # print_precision_recall_fscore(preds, truth, true_counts, inv_label_mapping)
-        # plot_results_table(p, r, f, true_counts, inv_label_mapping, cfg['num_classes'], 'baseline')
-        # with sklearn 0.21 a multilabel confusion matrix was added
-        # save_confusion_matrix(preds, truth, 'RF')
-        # avg_precisions = np.mean([avg_precision(a, p) for a, p in zip(true_labels, preds)])
-        # print('Average precision: {}'.format(avg_precisions))
         per_class_lwlrap, weights = calculate_per_class_lwlrap(np.asarray(truth), np.asarray(preds))
         lwlrap = calculate_overall_lwlrap_sklearn(truth, preds)
         save_lwlrap_results_table(per_class_lwlrap, labels, weights, 'RF')
         print('Model {} achieved an lwlrap of {}.'.format('RF', lwlrap))
+
+        # After calculating lwlrap we disentangle the multilabel predictions to single label predictions to calculate precision, recall and fscore
+        preds_single_label = []
+        truth_single_label = []
+        for p, t in zip(preds, truth):
+            if np.max(p) > 0:
+                idxs_p = np.nonzero(p > np.max(p)-clf_delta)[0]
+                idxs_t = np.nonzero(p == 1)[0]
+                if len(idxs_t) > 1 and len(idxs_p) > 1:
+                    if len(idxs_p) > len(idxs_t):
+                        diff = len(idxs_p)-len(idxs_t)
+                        idxs_t = np.pad(idxs_t, (0,diff), mode='constant', constant_values=[])
+                    elif len(idxs_t) > len(idxs_p):
+                        diff = len(idxs_t) - len(idxs_p)
+                        idxs_t = np.pad(idxs_p, (0, diff), mode='constant', constant_values=[])
+
+                    for idx_p, idx_t in zip(idxs_p, idxs_t):
+                        preds_single_label.extend(dataloader.one_hot_encode(idx_p, cfg['num_classes']))
+                        truth_single_label.extend(dataloader.one_hot_encode(idx_t, cfg['num_classes']))
+                else:
+                    preds_single_label.extend(p)
+                    truth_single_label.extend(t)
+            else:
+                preds_single_label.extend(p)
+                truth_single_label.extend(t)
+
+        p, r, f, s = precision_recall_fscore_support(truth_single_label, preds_single_label)
+        print_precision_recall_fscore(preds_single_label, truth_single_label, true_counts, inv_label_mapping)
+        plot_results_table(p, r, f, true_counts, inv_label_mapping, cfg['num_classes'], exp_name)
+        save_confusion_matrix(preds_single_label, truth_single_label, exp_name)
+        # avg_precisions = np.mean([avg_precision(a, p) for a, p in zip(true_labels, preds)])
+        # print('Average precision: {}'.format(avg_precisions))
+
 
 if __name__ == '__main__':
     main()

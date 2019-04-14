@@ -20,7 +20,7 @@ import tqdm
 
 import config
 from keras.models import model_from_yaml
-import keras
+from dataloader import load_batches, load_features, load_test_features
 
 
 def opts_parser():
@@ -31,8 +31,11 @@ def opts_parser():
             help='File to load the learned weights from')
     parser.add_argument('--outfile', metavar='OUTFILE',
             type=str,
-            help='File to save the prediction curves to (.npz/.pkl format)',
+            help='File to save the prediction curves to (.npy/.pkl format)',
             default=None, required=False)
+    parser.add_argument('--filelist', type=str, help='filelist to predict the labels for', default='validation',
+                        required=False)
+    parser.add_argument('--features', default='mel', type=str, help='features to predict on', required=False)
     config.prepare_argument_parser(parser)
     return parser
 
@@ -43,17 +46,15 @@ def main():
     modelfile = options.modelfile
     outfile = options.outfile
 
-
     # parse config
     if os.path.exists(vars):
         options.vars.insert(1, vars)
     cfg = config.from_parsed_arguments(options)
 
-    # prepare dataset
 
     print("Preparing prediction function...")
     # instantiate neural network
-    with open(modelfile.replace(".py", ".yaml"), 'r') as yaml_file:
+    with open(modelfile, 'r') as yaml_file:
         yaml_model = yaml_file.read()
 
     network = model_from_yaml(yaml_model)
@@ -63,13 +64,38 @@ def main():
 
     # run prediction loop
     print("Predicting:")
-    predictions = None
+    fold = modelfile.split('_')[1][-1]
+    if options.filelist == 'validation':
+        with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
+            filelist = in_file.readlines()
+        batches = load_batches(filelist, cfg['batchsize'])
+    else:
+        filelist = os.listdir('../features/{}/test'.format(options.features))
+        filelist = [file.replace('.npy', '') for file in filelist]
+        batches = load_batches(filelist, cfg['batchsize'])
 
+    predictions = []
+    truth = []
+    for batch in tqdm.trange(batches, desc='Batch'):
+        if options.filelist == 'validation':
+            X, y = load_features(batch, features=options.features, num_classes=cfg['num_classes'])
+            X = X[:, :, :, np.newaxis]
+        else:
+            X = load_test_features(batch, features=options.features)
+
+        preds = network.predict(x=X, batch_size=cfg['batchsize'], verbose=0)
+        predictions.extend(preds)
+        if options.filelist == 'validation':
+            truth.extend(y)
 
     # save predictions
     print("Saving predictions")
-    with io.open(modelfile.replace('auto', outfile), 'wb') as f:
-        np.save('predictions', predictions)
+    if options.filelist == 'validation':
+        np.save('predictions/{}_predictions_fold{}'.format(modelfile.replace('.yaml', ''), fold), np.asarray(predictions))
+        np.save('predictions/{}_truth_fold{}'.format(modelfile.replace('.yaml', ''), fold), np.asarray(truth))
+    else:
+        np.save('predictions/{}_predictions_test'.format(modelfile.replace('.yaml', ''), fold),
+                np.asarray(predictions))
 
 if __name__ == "__main__":
     main()

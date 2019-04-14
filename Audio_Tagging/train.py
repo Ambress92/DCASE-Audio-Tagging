@@ -117,9 +117,9 @@ def main():
         epoch_lwlrap_train = []
         epoch_lwlrap_eval = []
 
-        train_batches = dataloader.load_batches(train_files, cfg['batchsize'], infinite=True, shuffle=True)
-        train_eval_batches = dataloader.load_batches(train_files, cfg['batchsize'], infinite=False, shuffle=False)
-        eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False)
+        train_batches = dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True)
+        train_eval_batches = dataloader.load_batches(train_files, cfg['batchsize'], shuffle=False)
+        eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'])
 
         for _ in tqdm.trange(
                 cfg['epochsize'],
