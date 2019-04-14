@@ -201,7 +201,7 @@ def main():
                     print("Decreasing learning rate by {}...".format(cfg['lr_decrease']))
         else:
             print("Average lwlrap increased - Saving weights...\n")
-            network.save_weights("models/baseline_fold{}.hd5".format(fold))
+            network.save_weights("models/{}_fold{}.hd5".format(modelfile.replace('.py', ''), fold))
 
         # Save loss and learning curve of trained model
         save_learning_curve(train_acc, val_acc, "{}_fold{}_accuracy_learning_curve.pdf".format(modelfile.replace('.py', ''), fold), 'Accuracy', 'Accuracy')
