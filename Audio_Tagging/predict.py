@@ -44,11 +44,8 @@ def main():
     parser = opts_parser()
     options = parser.parse_args()
     modelfile = options.modelfile
-    outfile = options.outfile
 
     # parse config
-    if os.path.exists(vars):
-        options.vars.insert(1, vars)
     cfg = config.from_parsed_arguments(options)
 
 
@@ -60,11 +57,11 @@ def main():
     network = model_from_yaml(yaml_model)
 
     # load saved weights
-    network.load_weights(modelfile.replace('.py', '.hd5'))
+    network.load_weights(modelfile.replace('.yaml', '.hd5'))
 
     # run prediction loop
     print("Predicting:")
-    fold = modelfile.split('_')[1][-1]
+    fold = int(modelfile.split('_')[2].split('.')[0][-1])
     if options.filelist == 'validation':
         with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
             filelist = in_file.readlines()
@@ -76,7 +73,7 @@ def main():
 
     predictions = []
     truth = []
-    for batch in tqdm.trange(batches, desc='Batch'):
+    for batch in tqdm.tqdm(batches, desc='Batch'):
         if options.filelist == 'validation':
             X, y = load_features(batch, features=options.features, num_classes=cfg['num_classes'])
             X = X[:, :, :, np.newaxis]
@@ -91,10 +88,10 @@ def main():
     # save predictions
     print("Saving predictions")
     if options.filelist == 'validation':
-        np.save('predictions/{}_predictions_fold{}'.format(modelfile.replace('.yaml', ''), fold), np.asarray(predictions))
-        np.save('predictions/{}_truth_fold{}'.format(modelfile.replace('.yaml', ''), fold), np.asarray(truth))
+        np.save('predictions/{}_predictions_fold{}'.format(modelfile.split('/')[1].replace('.yaml', ''), fold), np.asarray(predictions))
+        np.save('predictions/{}_truth_fold{}'.format(modelfile.split('/')[1].replace('.yaml', ''), fold), np.asarray(truth))
     else:
-        np.save('predictions/{}_predictions_test'.format(modelfile.replace('.yaml', ''), fold),
+        np.save('predictions/{}_predictions_test'.format(modelfile.split('/')[1].replace('.yaml', ''), fold),
                 np.asarray(predictions))
 
 if __name__ == "__main__":

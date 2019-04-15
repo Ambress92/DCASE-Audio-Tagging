@@ -18,30 +18,38 @@ def baseline(data_format, num_classes):
 
     model = keras.models.Sequential()
 
-    model.add(Conv2D(ini_filters, (7, 7), strides=1, activation='relu', padding='same', input_shape=data_format))
+    model.add(Conv2D(ini_filters, (5, 5), strides=2, activation='relu', padding='same', input_shape=data_format))
     model.add(BatchNormalization(momentum=0.9, axis=-1))
-    model.add(MaxPooling2D((5, 5), strides=(3, 3)))
+    model.add(MaxPooling2D((2, 2), strides=(2, 2)))
     model.add(Dropout(0.3))
 
-    model.add(Conv2D(2 * ini_filters, (5, 5), strides=1, activation='relu', padding='same'))
+    model.add(Conv2D(2 * ini_filters, (3, 3), strides=1, activation='relu', padding='same'))
     model.add(BatchNormalization(momentum=0.9, axis=-1))
-    model.add(MaxPooling2D((5, 5), strides=(3, 3)))
+    model.add(MaxPooling2D((2, 2), strides=(2, 2)))
     model.add(Dropout(0.3))
 
     model.add(Conv2D(4 * ini_filters, (3, 3), strides=1, activation='relu', padding='same'))
     model.add(BatchNormalization(momentum=0.9, axis=-1))
     model.add(Dropout(0.3))
-    model.add(MaxPooling2D((2, 3), strides=(1, 2)))
 
-    model.add(Conv2D(6 * ini_filters, (3, 3), strides=1, activation='relu', padding='same'))
+    model.add(Conv2D(8 * ini_filters, (3, 3), strides=1, activation='relu', padding='same'))
     model.add(BatchNormalization(momentum=0.9, axis=-1))
-    model.add(MaxPooling2D((2, 3), strides=(1, 2)))
+    model.add(MaxPooling2D((1, 2), strides=(1, 2)))
     model.add(Dropout(0.3))
+
+    model.add(Conv2D(8 * ini_filters, (3, 3), strides=1, activation='relu', padding='same'))
+    model.add(BatchNormalization(momentum=0.9, axis=-1))
+    model.add(MaxPooling2D((1, 2), strides=(1, 2)))
+    model.add(Dropout(0.3))
+
+    model.add(Conv2D(8 * ini_filters, (3, 3), strides=1, activation='relu', padding='same'))
+    model.add(BatchNormalization(momentum=0.9, axis=-1))
+    model.add(Dropout(0.5))
 
     # classification block
     model.add(Conv2D(num_classes, (1, 1), strides=1, activation='relu', padding='same'))
-    model.add(keras.layers.GlobalAveragePooling2D(data_format='channels_last'))
-    model.add(keras.layers.Activation(activation='sigmoid'))
+    model.add(GlobalAveragePooling2D(data_format='channels_last'))
+    model.add(Activation(activation='sigmoid'))
 
     print(model.summary())
 

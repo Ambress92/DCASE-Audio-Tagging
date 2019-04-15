@@ -9,6 +9,7 @@ import config
 import os
 import sklearn.metrics
 import dataloader
+import re
 
 TOP_N = 3
 
@@ -279,15 +280,11 @@ def main():
         pass
     else:
         clf_delta = 0.05
-        exp_name = infiles[0].split('_')[0]+'_'+infiles[0].split('_')[2]
-        preds_load = load_predictions(infiles[0])
-        prediction_labels = [inv_label_mapping[l] for p in preds_load for l in np.nonzero(p > 0)[0]]
-        prediction_counts = Counter(prediction_labels)
-        preds = [dataloader.one_hot_encode(p, 80) for p in preds_load]
-        truth_load = load_true_labels(options.truth)
-        true_labels = [inv_label_mapping[l] for t in truth_load for l in np.nonzero(t > 0)[0]]
+        exp_name = re.match(r'(.*)_predictions.*', infiles[0]).group(1)
+        preds = load_predictions(infiles[0])
+        truth = load_true_labels(options.truth)
+        true_labels = [inv_label_mapping[l] for t in truth for l in np.nonzero(t > 0)[0]]
         true_counts = Counter(true_labels)
-        truth = [dataloader.one_hot_encode(t, 80) for t in truth_load]
         truth = np.asarray(truth)
         preds = np.asarray(preds)
 
@@ -302,24 +299,30 @@ def main():
         for p, t in zip(preds, truth):
             if np.max(p) > 0:
                 idxs_p = np.nonzero(p > np.max(p)-clf_delta)[0]
-                idxs_t = np.nonzero(p == 1)[0]
-                if len(idxs_t) > 1 and len(idxs_p) > 1:
+                idxs_t = np.nonzero(t == 1)[0]
+                if len(idxs_t) > 1 or len(idxs_p) > 1:
                     if len(idxs_p) > len(idxs_t):
                         diff = len(idxs_p)-len(idxs_t)
-                        idxs_t = np.pad(idxs_t, (0,diff), mode='constant', constant_values=[])
+                        idxs_t = np.pad(idxs_t, (0,diff), mode='constant', constant_values=-1)
                     elif len(idxs_t) > len(idxs_p):
                         diff = len(idxs_t) - len(idxs_p)
-                        idxs_t = np.pad(idxs_p, (0, diff), mode='constant', constant_values=[])
+                        idxs_t = np.pad(idxs_p, (0, diff), mode='constant', constant_values=-1)
 
                     for idx_p, idx_t in zip(idxs_p, idxs_t):
-                        preds_single_label.extend(dataloader.one_hot_encode(idx_p, cfg['num_classes']))
-                        truth_single_label.extend(dataloader.one_hot_encode(idx_t, cfg['num_classes']))
+                        if idx_p == -1:
+                            preds_single_label.append(dataloader.one_hot_encode([], cfg['num_classes']))
+                        else:
+                            preds_single_label.append(dataloader.one_hot_encode(idx_p, cfg['num_classes']))
+                        if idx_t == -1:
+                            truth_single_label.append(dataloader.one_hot_encode([], cfg['num_classes']))
+                        else:
+                            truth_single_label.append(dataloader.one_hot_encode(idx_t, cfg['num_classes']))
                 else:
-                    preds_single_label.extend(p)
-                    truth_single_label.extend(t)
+                    preds_single_label.append(p)
+                    truth_single_label.append(t)
             else:
-                preds_single_label.extend(p)
-                truth_single_label.extend(t)
+                preds_single_label.append(p)
+                truth_single_label.append(t)
 
         p, r, f, s = precision_recall_fscore_support(truth_single_label, preds_single_label)
         print_precision_recall_fscore(preds_single_label, truth_single_label, true_counts, inv_label_mapping)
