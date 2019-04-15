@@ -8,6 +8,7 @@ import config
 import tqdm
 import matplotlib.pyplot as plt
 from sklearn.metrics import label_ranking_average_precision_score
+import keras.backend as K
 
 def opts_parser():
     descr = "Trains a neural network."
@@ -73,8 +74,9 @@ def main():
     eval_files = []
     with open('../datasets/cv/fold{}_curated_train'.format(fold), 'r') as in_file:
         train_files.extend(in_file.readlines())
-    with open('../datasets/cv/fold{}_noisy_train'.format(fold), 'r') as in_file:
-        train_files.extend(in_file.readlines())
+    for f in range(1,5):
+        with open('../datasets/cv/fold{}_noisy_train'.format(f), 'r') as in_file:
+            train_files.extend(in_file.readlines())
 
     with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
         eval_files.extend(in_file.readlines())
@@ -133,21 +135,15 @@ def main():
             epoch_train_acc.append(metrics[1])
             epoch_train_loss.append(metrics[0])
 
-        print('Loss on training set after epoch {}: {}'.format(epoch, np.mean(epoch_train_loss)))
-        print('Accuracy on training set after epoch {}: {}\n'.format(epoch, np.mean(epoch_train_acc)))
-
-        print('Predicting...')
-        for batch in tqdm.tqdm(train_eval_batches, desc='Batch'):
-
-            X_train, y_train = dataloader.load_features(batch, features='mel', num_classes=cfg['num_classes'])
-            X_train = X_train[:, :, :, np.newaxis]
-
             preds = network.predict(x=X_train, batch_size=cfg['batchsize'], verbose=0)
 
             epoch_lwlrap_train.append(lwlrap_metric(np.asarray(y_train), np.asarray(preds)))
 
+        print('Loss on training set after epoch {}: {}'.format(epoch, np.mean(epoch_train_loss)))
+        print('Accuracy on training set after epoch {}: {}\n'.format(epoch, np.mean(epoch_train_acc)))
         print('Label weighted label ranking average precision on training set after epoch {}: {}'.format(epoch,
                                                                                                          np.mean(epoch_lwlrap_train)))
+
         train_loss.append(np.mean(epoch_train_loss))
         train_acc.append(np.mean(epoch_train_acc))
         lwlraps_train.append(np.mean(epoch_lwlrap_train))
@@ -186,9 +182,9 @@ def main():
             elif not cfg['linear_decay']:
                 epochs_without_decrase += 1
                 if epochs_without_decrase == cfg['epochs_without_decrease']:
-                    lr = keras.backend.get_value(network.optimizer.lr)
+                    lr = K.get_value(network.optimizer.lr)
                     lr = lr * cfg['lr_decrease']
-                    keras.backend.set_value(network.optimizer.lr, lr)
+                    K.set_value(network.optimizer.lr, lr)
                     print("lwlrap did not increase for the last {} epochs - halfing learning rate...".format(
                         cfg['epochs_without_decrease']))
                     epochs_without_decrase = 0
