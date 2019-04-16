@@ -9,48 +9,57 @@ Author: Jan Schlüter, Fabian Paischer and Matthias Dorfer
 """
 
 import keras
-from keras.layers import Conv2D, BatchNormalization, GlobalAveragePooling2D, Activation, MaxPooling2D, Dropout
+from keras.layers import Conv2D, BatchNormalization, GlobalAveragePooling2D, Activation, MaxPooling2D, Dropout, AveragePooling2D, Input, Lambda, Flatten, Dense
+import keras.backend as K
 
 
 def baseline(data_format, num_classes):
-
     ini_filters = 64
 
-    model = keras.models.Sequential()
+    inputs = Input(data_format)
 
-    model.add(Conv2D(ini_filters, (5, 5), strides=2, activation='relu', padding='same', input_shape=data_format))
-    model.add(BatchNormalization(momentum=0.9, axis=-1))
-    model.add(MaxPooling2D((2, 2), strides=(2, 2)))
-    model.add(Dropout(0.3))
+    model = Conv2D(ini_filters, (3, 3), strides=1, activation='relu', padding='same', input_shape=data_format,
+                   kernel_initializer='he_normal', use_bias=False)(inputs)
+    model = BatchNormalization(momentum=0.9, axis=-1)(model)
+    model = AveragePooling2D((2, 2), strides=(2, 2))(model)
+    model = Conv2D(ini_filters, (3, 3), strides=1, activation='relu', padding='same', kernel_initializer='he_normal',
+                   use_bias=False)(model)
+    model = BatchNormalization(momentum=0.9, axis=-1)(model)
+    model = AveragePooling2D((2, 2), strides=(2, 2))(model)
 
-    model.add(Conv2D(2 * ini_filters, (3, 3), strides=1, activation='relu', padding='same'))
-    model.add(BatchNormalization(momentum=0.9, axis=-1))
-    model.add(MaxPooling2D((2, 2), strides=(2, 2)))
-    model.add(Dropout(0.3))
+    model = Conv2D(2 * ini_filters, (3, 3), strides=1, activation='relu', padding='same',
+                   kernel_initializer='he_normal', use_bias=False)(model)
+    model = BatchNormalization(momentum=0.9, axis=-1)(model)
+    model = AveragePooling2D((2, 2), strides=(2, 2))(model)
+    model = Conv2D(2 * ini_filters, (3, 3), strides=1, activation='relu', padding='same',
+                   kernel_initializer='he_normal', use_bias=False)(model)
+    model = BatchNormalization(momentum=0.9, axis=-1)(model)
+    model = AveragePooling2D((2, 2), strides=(2, 2))(model)
 
-    model.add(Conv2D(4 * ini_filters, (3, 3), strides=1, activation='relu', padding='same'))
-    model.add(BatchNormalization(momentum=0.9, axis=-1))
-    model.add(Dropout(0.3))
+    model = Conv2D(4 * ini_filters, (3, 3), strides=1, activation='relu', padding='same',
+                   kernel_initializer='he_normal', use_bias=False)(model)
+    model = BatchNormalization(momentum=0.9, axis=-1)(model)
+    model = AveragePooling2D((2, 2), strides=(2, 2))(model)
+    model = Conv2D(4 * ini_filters, (3, 3), strides=1, activation='relu', padding='same',
+                   kernel_initializer='he_normal', use_bias=False)(model)
+    model = BatchNormalization(momentum=0.9, axis=-1)(model)
+    model = AveragePooling2D((2, 2), strides=(2, 2))(model)
 
-    model.add(Conv2D(8 * ini_filters, (3, 3), strides=1, activation='relu', padding='same'))
-    model.add(BatchNormalization(momentum=0.9, axis=-1))
-    model.add(MaxPooling2D((1, 2), strides=(1, 2)))
-    model.add(Dropout(0.3))
+    model = Conv2D(8 * ini_filters, (3, 3), strides=1, activation='relu', padding='same',
+                   kernel_initializer='he_normal', use_bias=False)(model)
+    model = BatchNormalization(momentum=0.9, axis=-1)(model)
+    model = AveragePooling2D((2, 2), strides=(2, 2))(model)
+    model = Conv2D(8 * ini_filters, (3, 3), strides=1, activation='relu', padding='same',
+                   kernel_initializer='he_normal', use_bias=False)(model)
+    model = BatchNormalization(momentum=0.9, axis=-1)(model)
+    model = AveragePooling2D((1, 2), strides=(1, 2))(model)
 
-    model.add(Conv2D(8 * ini_filters, (3, 3), strides=1, activation='relu', padding='same'))
-    model.add(BatchNormalization(momentum=0.9, axis=-1))
-    model.add(MaxPooling2D((1, 2), strides=(1, 2)))
-    model.add(Dropout(0.3))
+    model = Lambda(lambda x: K.mean(x, axis=1)[:, None, :, :])(model)
+    model = Lambda(lambda x: K.max(x, axis=2))(model)
+    model = Flatten()(model)
+    output = Dense(num_classes, activation='softmax')(model)
 
-    model.add(Conv2D(8 * ini_filters, (3, 3), strides=1, activation='relu', padding='same'))
-    model.add(BatchNormalization(momentum=0.9, axis=-1))
-    model.add(Dropout(0.5))
-
-    # classification block
-    model.add(Conv2D(num_classes, (1, 1), strides=1, activation='relu', padding='same'))
-    model.add(GlobalAveragePooling2D(data_format='channels_last'))
-    model.add(Activation(activation='sigmoid'))
-
+    model = keras.models.Model(inputs=[inputs], outputs=[output])
     print(model.summary())
 
     return model
