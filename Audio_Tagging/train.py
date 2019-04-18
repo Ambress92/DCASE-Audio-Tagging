@@ -66,7 +66,7 @@ def main():
     verified_files_dict = dataloader.get_verified_files_dict()
     noisy_files_dict = dataloader.get_unverified_files_dict()
     total_files_dict = dict(verified_files_dict, **noisy_files_dict)
-    fold = 1
+    fold = 2
 
     print('Loading data...')
     #for fold in range(1,5):
@@ -74,9 +74,9 @@ def main():
     eval_files = []
     with open('../datasets/cv/fold{}_curated_train'.format(fold), 'r') as in_file:
         train_files.extend(in_file.readlines())
-    for f in range(1,5):
-        with open('../datasets/cv/fold{}_noisy_train'.format(f), 'r') as in_file:
-            train_files.extend(in_file.readlines())
+    #for f in range(1,5):
+    #    with open('../datasets/cv/fold{}_noisy_train'.format(f), 'r') as in_file:
+    #        train_files.extend(in_file.readlines())
 
     with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
         eval_files.extend(in_file.readlines())
@@ -119,17 +119,16 @@ def main():
         epoch_lwlrap_train = []
         epoch_lwlrap_eval = []
 
-        train_batches = dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True)
-        train_eval_batches = dataloader.load_batches(train_files, cfg['batchsize'], shuffle=False)
-        eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'])
+        train_batches = dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True)
+        train_eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], shuffle=False, infinite=False)
+        eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False)
+        steps_per_epoch = len(train_files) // cfg['batchsize']
 
         for _ in tqdm.trange(
-                cfg['epochsize'],
+                steps_per_epoch,
                 desc='Epoch %d/%d:' % (epoch + 1, cfg['epochs'])):
 
-            batch = next(train_batches)
-            X_train, y_train = dataloader.load_features(batch, features='mel', num_classes=cfg['num_classes'])
-            X_train = X_train[:,:,:,np.newaxis]
+            X_train, y_train = next(train_batches)
 
             metrics = network.train_on_batch(x=X_train, y=y_train)
             epoch_train_acc.append(metrics[1])
@@ -148,9 +147,7 @@ def main():
         train_acc.append(np.mean(epoch_train_acc))
         lwlraps_train.append(np.mean(epoch_lwlrap_train))
 
-        for batch_valid in tqdm.tqdm(eval_batches, desc='Batch'):
-            X_test, y_test = dataloader.load_features(batch_valid, features='mel', num_classes=cfg['num_classes'])
-            X_test = X_test[:, :, :, np.newaxis]
+        for X_test, y_test in tqdm.tqdm(eval_batches, desc='Batch'):
 
             metrics = network.test_on_batch(x=X_test, y=y_test)
 
@@ -161,7 +158,7 @@ def main():
 
             epoch_lwlrap_eval.append(lwlrap_metric(np.asarray(y_test), np.asarray(predictions)))
 
-        lwlraps_eval.append(np.mean(epoch_lwlrap_eval))
+
         val_acc.append(np.mean(batch_val_acc))
         val_loss.append(np.mean(batch_val_loss))
 
@@ -198,6 +195,8 @@ def main():
         else:
             print("Average lwlrap increased - Saving weights...\n")
             network.save_weights("models/{}_fold{}.hd5".format(modelfile.replace('.py', ''), fold))
+
+        lwlraps_eval.append(np.mean(epoch_lwlrap_eval))
 
         # Save loss and learning curve of trained model
         save_learning_curve(train_acc, val_acc, "{}_fold{}_accuracy_learning_curve.pdf".format(modelfile.replace('.py', ''), fold), 'Accuracy', 'Accuracy')

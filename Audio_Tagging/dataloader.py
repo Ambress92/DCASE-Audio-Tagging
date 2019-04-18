@@ -150,16 +150,24 @@ def load_features(filelist, features, num_classes, fixed_length=3132, n_frames=9
 
     return np.asarray(X), np.asarray(y)
 
-def load_batches(filelist, batchsize, shuffle=False, drop_remainder=False):
+def load_batches(filelist, batchsize, shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel'):
     num_datapoints = len(filelist)
-    if shuffle:
-        np.random.shuffle(filelist)
 
-    rest = (num_datapoints % batchsize)
-    upper_bound = num_datapoints - (rest if drop_remainder else 0)
-    for start_idx in range(0, upper_bound, batchsize):
-        batch = filelist[start_idx: start_idx+batchsize]
-        yield batch
+    while True:
+        rest = (num_datapoints % batchsize)
+        upper_bound = num_datapoints - (rest if drop_remainder else 0)
+        for start_idx in range(0, upper_bound, batchsize):
+            batch = filelist[start_idx: start_idx+batchsize]
+
+            X, y = load_features(batch, features=features, num_classes=num_classes)
+            X = X[:,:,:,np.newaxis]
+            yield (X, y)
+
+        if not infinite:
+            break
+
+        if shuffle:
+            np.random.shuffle(filelist)
 
 def load_verified_files(features=None):
     verified_files_dict = get_verified_files_dict()
