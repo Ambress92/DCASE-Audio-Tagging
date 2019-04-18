@@ -60,9 +60,6 @@ def main():
     # keras configurations
     keras.backend.set_image_data_format('channels_last')
 
-    # classification threshold delta
-    clf_delta = 0.05
-
     verified_files_dict = dataloader.get_verified_files_dict()
     noisy_files_dict = dataloader.get_unverified_files_dict()
     total_files_dict = dict(verified_files_dict, **noisy_files_dict)
@@ -120,7 +117,6 @@ def main():
         epoch_lwlrap_eval = []
 
         train_batches = dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True)
-        train_eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], shuffle=False, infinite=False)
         eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False)
         steps_per_epoch = len(train_files) // cfg['batchsize']
 

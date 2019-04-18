@@ -21,6 +21,7 @@ import tqdm
 import config
 from keras.models import model_from_yaml
 from dataloader import load_batches, load_features, load_test_features
+import re
 
 
 def opts_parser():
@@ -61,7 +62,7 @@ def main():
 
     # run prediction loop
     print("Predicting:")
-    fold = int(modelfile.split('_')[2].split('.')[0][-1])
+    fold = int(re.match(f'.*fold([0-9]).*', modelfile).group(1))
     if options.filelist == 'validation':
         with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
             filelist = in_file.readlines()
@@ -69,30 +70,39 @@ def main():
     else:
         filelist = os.listdir('../features/{}/test'.format(options.features))
         filelist = [file.replace('.npy', '') for file in filelist]
-        batches = load_batches(filelist, cfg['batchsize'])
+        batches = load_batches(filelist, cfg['batchsize'], test=True)
 
     predictions = []
     truth = []
-    for batch in tqdm.tqdm(batches, desc='Batch'):
-        if options.filelist == 'validation':
-            X, y = load_features(batch, features=options.features, num_classes=cfg['num_classes'])
-            X = X[:, :, :, np.newaxis]
-        else:
-            X = load_test_features(batch, features=options.features)
 
-        preds = network.predict(x=X, batch_size=cfg['batchsize'], verbose=0)
-        predictions.extend(preds)
+    if options.filelist == 'test':
+
+        for X, batch in tqdm.tqdm(batches):
+            preds = network.predict(x=X, batch_size=cfg['batchsize'], verbose=0)
+            predictions.extend(np.average(preds, axis=0))
+
+    else:
+        for X, y  in tqdm.tqdm(batches, desc='Batch'):
+            preds = network.predict(x=X, batch_size=cfg['batchsize'], verbose=0)
+            predictions.append(np.average(preds, axis=0))
+            truth.append(np.average(y, axis=0))
+
+    pred_dict = {}
+    truth_dict = {}
+    for i, file in enumerate(filelist):
+        pred_dict[file] = predictions[i]
         if options.filelist == 'validation':
-            truth.extend(y)
+            truth_dict[file] = truth[i]
 
     # save predictions
     print("Saving predictions")
     if options.filelist == 'validation':
-        np.save('predictions/{}_predictions_fold{}'.format(modelfile.split('/')[1].replace('.yaml', ''), fold), np.asarray(predictions))
-        np.save('predictions/{}_truth_fold{}'.format(modelfile.split('/')[1].replace('.yaml', ''), fold), np.asarray(truth))
+        np.save('predictions/{}_predictions_fold{}'.format(modelfile.split('/')[1].replace('.yaml', ''), fold), pred_dict)
+        np.save('predictions/{}_truth_fold{}'.format(modelfile.split('/')[1].replace('.yaml', ''), fold), truth_dict)
     else:
         np.save('predictions/{}_predictions_test'.format(modelfile.split('/')[1].replace('.yaml', ''), fold),
-                np.asarray(predictions))
+                np.asarray(pred_dict))
+
 
 if __name__ == "__main__":
     main()

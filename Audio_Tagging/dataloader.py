@@ -184,7 +184,7 @@ def load_features(filelist, features, num_classes, feature_path='../features/',
 
     return np.asarray(X), np.asarray(y)
 
-def load_batches(filelist, batchsize, shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel'):
+def load_batches(filelist, batchsize, shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel', test=False):
     num_datapoints = len(filelist)
 
     while True:
@@ -193,9 +193,13 @@ def load_batches(filelist, batchsize, shuffle=False, drop_remainder=False, infin
         for start_idx in range(0, upper_bound, batchsize):
             batch = filelist[start_idx: start_idx+batchsize]
 
-            X, y = load_features(batch, features=features, num_classes=num_classes)
-            X = X[:,:,:,np.newaxis]
-            yield (X, y)
+            if not test:
+                X, y = load_features(batch, features=features, num_classes=num_classes)
+                X = X[:,:,:,np.newaxis]
+                yield (X, y)
+            else:
+                X = load_test_features(batch, features)
+                yield X
 
         if not infinite:
             break
