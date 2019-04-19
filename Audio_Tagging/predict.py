@@ -77,7 +77,7 @@ def main():
 
     if options.filelist == 'test':
 
-        for X, batch in tqdm.tqdm(batches):
+        for X in tqdm.tqdm(batches):
             preds = network.predict(x=X, batch_size=cfg['batchsize'], verbose=0)
             predictions.extend(np.average(preds, axis=0))
 

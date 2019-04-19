@@ -252,11 +252,11 @@ def print_maps(ap_sums, ap_counts, class_map=None):
     print('Overall MAP: %.4f\n' % m_ap)
 
 def load_true_labels(file):
-    return np.load('predictions/{}'.format(file))
+    return np.load('predictions/{}'.format(file)).item()
 
 
 def load_predictions(infile):
-    return np.load('predictions/{}'.format(infile))
+    return np.load('predictions/{}'.format(infile)).item()
 
 
 def main():
@@ -279,24 +279,24 @@ def main():
         # perform late fusion (average, min, max)
         pass
     else:
-        clf_delta = 0.05
+        clf_delta = 0.005
         exp_name = re.match(r'(.*)_predictions.*', infiles[0]).group(1)
         preds = load_predictions(infiles[0])
         truth = load_true_labels(options.truth)
-        true_labels = [inv_label_mapping[l] for t in truth for l in np.nonzero(t > 0)[0]]
+        true_labels = [l for t in truth.values() for l in np.nonzero(t > 0)[0]]
         true_counts = Counter(true_labels)
-        truth = np.asarray(truth)
-        preds = np.asarray(preds)
 
-        per_class_lwlrap, weights = calculate_per_class_lwlrap(np.asarray(truth), np.asarray(preds))
-        lwlrap = calculate_overall_lwlrap_sklearn(truth, preds)
+        truth_labels = [l for l in truth.values()]
+        preds_labels = [l for l in preds.values()]
+        per_class_lwlrap, weights = calculate_per_class_lwlrap(np.asarray(truth_labels), np.asarray(preds_labels))
+        lwlrap = calculate_overall_lwlrap_sklearn(np.asarray(truth_labels), np.asarray(preds_labels))
         save_lwlrap_results_table(per_class_lwlrap, labels, weights, 'RF')
-        print('Model {} achieved an lwlrap of {}.'.format('RF', lwlrap))
+        print('Model {} achieved an lwlrap of {}.'.format(infiles[0], lwlrap))
 
         # After calculating lwlrap we disentangle the multilabel predictions to single label predictions to calculate precision, recall and fscore
         preds_single_label = []
         truth_single_label = []
-        for p, t in zip(preds, truth):
+        for p, t in zip(preds_labels, truth_labels):
             if np.max(p) > 0:
                 idxs_p = np.nonzero(p > np.max(p)-clf_delta)[0]
                 idxs_t = np.nonzero(t == 1)[0]
@@ -306,7 +306,7 @@ def main():
                         idxs_t = np.pad(idxs_t, (0,diff), mode='constant', constant_values=-1)
                     elif len(idxs_t) > len(idxs_p):
                         diff = len(idxs_t) - len(idxs_p)
-                        idxs_t = np.pad(idxs_p, (0, diff), mode='constant', constant_values=-1)
+                        idxs_p = np.pad(idxs_p, (0, diff), mode='constant', constant_values=-1)
 
                     for idx_p, idx_t in zip(idxs_p, idxs_t):
                         if idx_p == -1:
@@ -318,12 +318,14 @@ def main():
                         else:
                             truth_single_label.append(dataloader.one_hot_encode(idx_t, cfg['num_classes']))
                 else:
-                    preds_single_label.append(p)
+                    preds_single_label.append(dataloader.one_hot_encode(idxs_p, cfg['num_classes']))
                     truth_single_label.append(t)
             else:
                 preds_single_label.append(p)
                 truth_single_label.append(t)
 
+        preds_single_label = [np.argmax(p) for p in preds_single_label]
+        truth_single_label = [np.argmax(t) for t in truth_single_label]
         p, r, f, s = precision_recall_fscore_support(truth_single_label, preds_single_label)
         print_precision_recall_fscore(preds_single_label, truth_single_label, true_counts, inv_label_mapping)
         plot_results_table(p, r, f, true_counts, inv_label_mapping, cfg['num_classes'], exp_name)

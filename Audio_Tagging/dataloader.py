@@ -199,6 +199,7 @@ def load_batches(filelist, batchsize, shuffle=False, drop_remainder=False, infin
                 yield (X, y)
             else:
                 X = load_test_features(batch, features)
+                X = X[:,:,:,np.newaxis]
                 yield X
 
         if not infinite:

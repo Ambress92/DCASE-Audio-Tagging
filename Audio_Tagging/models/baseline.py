@@ -57,7 +57,7 @@ def baseline(data_format, num_classes):
     model = Lambda(lambda x: K.mean(x, axis=1)[:, None, :, :])(model)
     model = Lambda(lambda x: K.max(x, axis=2))(model)
     model = Flatten()(model)
-    output = Dense(num_classes, activation='softmax')(model)
+    output = Dense(num_classes, activation='sigmoid')(model)
 
     model = keras.models.Model(inputs=[inputs], outputs=[output])
     print(model.summary())
