@@ -1,23 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-Computes predictions with a neural network.
-
-For usage information, call with --help.
-
-Authors: Jan Schlüter, Fabian Paischer, Matthias Dorfer
-"""
-
 from __future__ import print_function
-
-import io
 import os
 from argparse import ArgumentParser
-
 import numpy as np
+np.random.seed(101)
 import tqdm
-
 import config
 from keras.models import model_from_yaml
 from dataloader import load_batches, load_features, load_test_features
@@ -79,7 +68,7 @@ def main():
 
         for X in tqdm.tqdm(batches):
             preds = network.predict(x=X, batch_size=cfg['batchsize'], verbose=0)
-            predictions.extend(np.average(preds, axis=0))
+            predictions.append(np.average(preds, axis=0))
 
     else:
         for X, y  in tqdm.tqdm(batches, desc='Batch'):

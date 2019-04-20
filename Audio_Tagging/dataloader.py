@@ -1,6 +1,7 @@
 from scipy.io import wavfile
 import tqdm
 import numpy as np
+np.random.seed(101)
 import os
 
 def repeat_spectrogram(spec, fixed_length):
@@ -189,6 +190,10 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
     num_datapoints = len(filelist)
 
     while True:
+
+        if shuffle:
+            np.random.shuffle(filelist)
+
         rest = (num_datapoints % batchsize)
         upper_bound = num_datapoints - (rest if drop_remainder else 0)
         for start_idx in range(0, upper_bound, batchsize):
@@ -206,9 +211,6 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
 
         if not infinite:
             break
-
-        if shuffle:
-            np.random.shuffle(filelist)
 
 def load_verified_files(features=None):
     verified_files_dict = get_verified_files_dict()

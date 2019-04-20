@@ -1,5 +1,6 @@
 import dataloader
 import numpy as np
+np.random.seed(101)
 import os
 import utils
 import keras
@@ -63,142 +64,141 @@ def main():
     verified_files_dict = dataloader.get_verified_files_dict()
     noisy_files_dict = dataloader.get_unverified_files_dict()
     total_files_dict = dict(verified_files_dict, **noisy_files_dict)
-    fold = 2
 
     print('Loading data...')
-    #for fold in range(1,5):
-    train_files = []
-    eval_files = []
-    with open('../datasets/cv/fold{}_curated_train'.format(fold), 'r') as in_file:
-        train_files.extend(in_file.readlines())
-    #for f in range(1,5):
-    #    with open('../datasets/cv/fold{}_noisy_train'.format(f), 'r') as in_file:
-    #        train_files.extend(in_file.readlines())
+    for fold in range(2,5):
+        train_files = []
+        eval_files = []
+        with open('../datasets/cv/fold{}_curated_train'.format(fold), 'r') as in_file:
+            train_files.extend(in_file.readlines())
+        #for f in range(1, 5):
+        #    with open('../datasets/cv/fold{}_noisy_train'.format(f), 'r') as in_file:
+        #        train_files.extend(in_file.readlines())
 
-    with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
-        eval_files.extend(in_file.readlines())
+        with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
+            eval_files.extend(in_file.readlines())
 
-    print('Loading model')
-    # import model from file
-    selected_model = utils.import_model(modelfile)
+        print('Loading model')
+        # import model from file
+        selected_model = utils.import_model(modelfile)
 
-    # instantiate neural network
-    print("Preparing training function...")
+        # instantiate neural network
+        print("Preparing training function...")
 
-    train_formats = (cfg['feature_height'], cfg['feature_width'], cfg['channels'])
-    network = selected_model.architecture(train_formats, cfg['num_classes'])
+        train_formats = (cfg['feature_height'], cfg['feature_width'], cfg['channels'])
+        network = selected_model.architecture(train_formats, cfg['num_classes'])
 
-    # Add optimizer and compile model
-    print("Compiling model ...")
-    optimizer = keras.optimizers.Adam(lr=cfg['lr'])
-    network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=['acc'])
+        # Add optimizer and compile model
+        print("Compiling model ...")
+        optimizer = keras.optimizers.Adam(lr=cfg['lr'])
+        network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=['acc'])
 
-    print("Preserving architecture and configuration ..")
-    save_model(os.path.join('models', modelfile.replace('.py', '')) + '_fold{}'.format(fold), network, cfg)
+        print("Preserving architecture and configuration ..")
+        save_model(os.path.join('models', modelfile.replace('.py', '')) + '_fold{}'.format(fold), network, cfg)
 
-    # Add batch creator, and training procedure
-    val_loss = []
-    val_acc = []
-    train_loss = []
-    train_acc = []
-    epochs_without_decrase = 0
-    lwlraps_eval = []
-    lwlraps_train = []
+        # Add batch creator, and training procedure
+        val_loss = []
+        val_acc = []
+        train_loss = []
+        train_acc = []
+        epochs_without_decrase = 0
+        lwlraps_eval = []
+        lwlraps_train = []
 
-    # run training loop
-    print("Training:")
-    for epoch in range(cfg['epochs']):
+        # run training loop
+        print("Training:")
+        for epoch in range(cfg['epochs']):
 
-        epoch_train_loss = []
-        epoch_train_acc = []
-        batch_val_loss = []
-        batch_val_acc = []
-        epoch_lwlrap_train = []
-        epoch_lwlrap_eval = []
+            epoch_train_loss = []
+            epoch_train_acc = []
+            batch_val_loss = []
+            batch_val_acc = []
+            epoch_lwlrap_train = []
+            epoch_lwlrap_eval = []
 
-        train_batches = dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True)
-        eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False)
-        steps_per_epoch = len(train_files) // cfg['batchsize']
+            train_batches = dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True)
+            eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False)
+            steps_per_epoch = len(train_files) // cfg['batchsize']
 
-        for _ in tqdm.trange(
-                steps_per_epoch,
-                desc='Epoch %d/%d:' % (epoch + 1, cfg['epochs'])):
+            for _ in tqdm.trange(
+                    steps_per_epoch,
+                    desc='Epoch %d/%d:' % (epoch + 1, cfg['epochs'])):
 
-            X_train, y_train = next(train_batches)
+                X_train, y_train = next(train_batches)
 
-            metrics = network.train_on_batch(x=X_train, y=y_train)
-            epoch_train_acc.append(metrics[1])
-            epoch_train_loss.append(metrics[0])
+                metrics = network.train_on_batch(x=X_train, y=y_train)
+                epoch_train_acc.append(metrics[1])
+                epoch_train_loss.append(metrics[0])
 
-            preds = network.predict(x=X_train, batch_size=cfg['batchsize'], verbose=0)
+                preds = network.predict(x=X_train, batch_size=cfg['batchsize'], verbose=0)
 
-            epoch_lwlrap_train.append(lwlrap_metric(np.asarray(y_train), np.asarray(preds)))
+                epoch_lwlrap_train.append(lwlrap_metric(np.asarray(y_train), np.asarray(preds)))
 
-        print('Loss on training set after epoch {}: {}'.format(epoch, np.mean(epoch_train_loss)))
-        print('Accuracy on training set after epoch {}: {}\n'.format(epoch, np.mean(epoch_train_acc)))
-        print('Label weighted label ranking average precision on training set after epoch {}: {}'.format(epoch,
-                                                                                                         np.mean(epoch_lwlrap_train)))
+            print('Loss on training set after epoch {}: {}'.format(epoch, np.mean(epoch_train_loss)))
+            print('Accuracy on training set after epoch {}: {}\n'.format(epoch, np.mean(epoch_train_acc)))
+            print('Label weighted label ranking average precision on training set after epoch {}: {}'.format(epoch,
+                                                                                                             np.mean(epoch_lwlrap_train)))
 
-        train_loss.append(np.mean(epoch_train_loss))
-        train_acc.append(np.mean(epoch_train_acc))
-        lwlraps_train.append(np.mean(epoch_lwlrap_train))
+            train_loss.append(np.mean(epoch_train_loss))
+            train_acc.append(np.mean(epoch_train_acc))
+            lwlraps_train.append(np.mean(epoch_lwlrap_train))
 
-        for X_test, y_test in tqdm.tqdm(eval_batches, desc='Batch'):
+            for X_test, y_test in tqdm.tqdm(eval_batches, desc='Batch'):
 
-            metrics = network.test_on_batch(x=X_test, y=y_test)
+                metrics = network.test_on_batch(x=X_test, y=y_test)
 
-            batch_val_loss.append(metrics[0])
-            batch_val_acc.append(metrics[1])
+                batch_val_loss.append(metrics[0])
+                batch_val_acc.append(metrics[1])
 
-            predictions = network.predict(x=X_test, batch_size=cfg['batchsize'], verbose=0)
+                predictions = network.predict(x=X_test, batch_size=cfg['batchsize'], verbose=0)
 
-            epoch_lwlrap_eval.append(lwlrap_metric(np.asarray(y_test), np.asarray(predictions)))
+                epoch_lwlrap_eval.append(lwlrap_metric(np.asarray(y_test), np.asarray(predictions)))
 
 
-        val_acc.append(np.mean(batch_val_acc))
-        val_loss.append(np.mean(batch_val_loss))
+            val_acc.append(np.mean(batch_val_acc))
+            val_loss.append(np.mean(batch_val_loss))
 
-        print('Loss on validation set after epoch {}: {}'.format(epoch, np.mean(batch_val_loss)))
-        print('Accuracy on validation set after epoch {}: {}'.format(epoch, np.mean(batch_val_acc)))
-        print('Label weighted label ranking average precision on validation set after epoch {}: {}'.format(epoch,
-                                                                                               np.mean(epoch_lwlrap_eval)))
+            print('Loss on validation set after epoch {}: {}'.format(epoch, np.mean(batch_val_loss)))
+            print('Accuracy on validation set after epoch {}: {}'.format(epoch, np.mean(batch_val_acc)))
+            print('Label weighted label ranking average precision on validation set after epoch {}: {}'.format(epoch,
+                                                                                                   np.mean(epoch_lwlrap_eval)))
 
-        current_loss = np.mean(batch_val_loss)
-        current_acc = np.mean(batch_val_acc)
-        current_lwlrap = np.mean(epoch_lwlrap_eval)
+            current_loss = np.mean(batch_val_loss)
+            current_acc = np.mean(batch_val_acc)
+            current_lwlrap = np.mean(epoch_lwlrap_eval)
 
-        if epoch > 0:
-            if current_lwlrap > np.amax(lwlraps_eval):
-                epochs_without_decrase = 0
+            if epoch > 0:
+                if current_lwlrap > np.amax(lwlraps_eval):
+                    epochs_without_decrase = 0
+                    print("Average lwlrap increased - Saving weights...\n")
+                    network.save_weights("models/{}_fold{}.hd5".format(modelfile.replace('.py', ''), fold))
+                elif not cfg['linear_decay']:
+                    epochs_without_decrase += 1
+                    if epochs_without_decrase == cfg['epochs_without_decrease']:
+                        lr = K.get_value(network.optimizer.lr)
+                        lr = lr * cfg['lr_decrease']
+                        K.set_value(network.optimizer.lr, lr)
+                        print("lwlrap did not increase for the last {} epochs - halfing learning rate...".format(
+                            cfg['epochs_without_decrease']))
+                        epochs_without_decrase = 0
+
+                if cfg['linear_decay']:
+                    if epoch >= cfg['start_linear_decay']:
+                        lr = keras.backend.get_value(network.optimizer.lr)
+                        lr = lr - cfg['lr_decrease']
+                        keras.backend.set_value(network.optimizer.lr, lr)
+                        print("Decreasing learning rate by {}...".format(cfg['lr_decrease']))
+            else:
                 print("Average lwlrap increased - Saving weights...\n")
                 network.save_weights("models/{}_fold{}.hd5".format(modelfile.replace('.py', ''), fold))
-            elif not cfg['linear_decay']:
-                epochs_without_decrase += 1
-                if epochs_without_decrase == cfg['epochs_without_decrease']:
-                    lr = K.get_value(network.optimizer.lr)
-                    lr = lr * cfg['lr_decrease']
-                    K.set_value(network.optimizer.lr, lr)
-                    print("lwlrap did not increase for the last {} epochs - halfing learning rate...".format(
-                        cfg['epochs_without_decrease']))
-                    epochs_without_decrase = 0
 
-            if cfg['linear_decay']:
-                if epoch >= cfg['start_linear_decay']:
-                    lr = keras.backend.get_value(network.optimizer.lr)
-                    lr = lr - cfg['lr_decrease']
-                    keras.backend.set_value(network.optimizer.lr, lr)
-                    print("Decreasing learning rate by {}...".format(cfg['lr_decrease']))
-        else:
-            print("Average lwlrap increased - Saving weights...\n")
-            network.save_weights("models/{}_fold{}.hd5".format(modelfile.replace('.py', ''), fold))
+            lwlraps_eval.append(np.mean(epoch_lwlrap_eval))
 
-        lwlraps_eval.append(np.mean(epoch_lwlrap_eval))
-
-        # Save loss and learning curve of trained model
-        save_learning_curve(train_acc, val_acc, "{}_fold{}_accuracy_learning_curve.pdf".format(modelfile.replace('.py', ''), fold), 'Accuracy', 'Accuracy')
-        save_learning_curve(train_loss, val_loss, "{}_fold{}_loss_curve.pdf".format(modelfile.replace('.py', ''), fold), 'Loss Curve', 'Loss')
-        save_learning_curve(lwlraps_train, lwlraps_eval, '{}_fold{}_lwlrap_curve.pdf'.format(modelfile.replace('.py', ''), fold),
-                            "Label Weighted Label Ranking Average Precision", 'lwlrap')
+            # Save loss and learning curve of trained model
+            save_learning_curve(train_acc, val_acc, "{}_fold{}_accuracy_learning_curve.pdf".format(modelfile.replace('.py', ''), fold), 'Accuracy', 'Accuracy')
+            save_learning_curve(train_loss, val_loss, "{}_fold{}_loss_curve.pdf".format(modelfile.replace('.py', ''), fold), 'Loss Curve', 'Loss')
+            save_learning_curve(lwlraps_train, lwlraps_eval, '{}_fold{}_lwlrap_curve.pdf'.format(modelfile.replace('.py', ''), fold),
+                                "Label Weighted Label Ranking Average Precision", 'lwlrap')
 
 
 if __name__ == '__main__':

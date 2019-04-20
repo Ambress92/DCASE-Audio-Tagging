@@ -1,4 +1,5 @@
 import numpy as np
+np.random.seed(101)
 from dataloader import get_label_mapping
 from sklearn.metrics import precision_recall_fscore_support, confusion_matrix
 import matplotlib.pyplot as plt
