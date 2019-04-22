@@ -52,7 +52,6 @@ def save_model(modelfile, network, cfg):
         yaml_file.write(network_yaml)
 
 def main():
-    label_mapping, inv_label_mapping = dataloader.get_label_mapping()
     parser = opts_parser()
     options = parser.parse_args()
     modelfile = options.modelfile
@@ -61,17 +60,12 @@ def main():
     # keras configurations
     keras.backend.set_image_data_format('channels_last')
 
-    verified_files_dict = dataloader.get_verified_files_dict()
-    noisy_files_dict = dataloader.get_unverified_files_dict()
-    total_files_dict = dict(verified_files_dict, **noisy_files_dict)
-
-    print('Loading data...')
-    for fold in range(2,5):
+    for fold in range(1,5):
         train_files = []
         eval_files = []
         with open('../datasets/cv/fold{}_curated_train'.format(fold), 'r') as in_file:
             train_files.extend(in_file.readlines())
-        #for f in range(1, 5):
+        # for f in range(1, 5):
         #    with open('../datasets/cv/fold{}_noisy_train'.format(f), 'r') as in_file:
         #        train_files.extend(in_file.readlines())
 

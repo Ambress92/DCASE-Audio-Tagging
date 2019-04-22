@@ -1,13 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-Model definition for visibility condition classification experiment.
-Provides architecture().
-
-Author: Jan Schlüter, Fabian Paischer and Matthias Dorfer
-"""
-
 import keras
 from keras.layers import Conv2D, BatchNormalization, GlobalAveragePooling2D, Activation, MaxPooling2D, Dropout
 

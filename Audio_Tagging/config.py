@@ -1,12 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-Utility functions for reading configurations.
-
-Author: Jan Schlüter
-"""
-
 import os
 import io
 
