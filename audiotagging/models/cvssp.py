@@ -1,19 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
-"""
-Model definition for visibility condition classification experiment.
-Provides architecture().
-
-Author: Jan Schlüter, Fabian Paischer and Matthias Dorfer
-"""
-
 import keras
-from keras.layers import Conv2D, BatchNormalization, GlobalAveragePooling2D, Activation, MaxPooling2D, Dropout, AveragePooling2D, Input, Lambda, Flatten, Dense
-import keras.backend as K
+from keras.layers import Conv2D, BatchNormalization, AveragePooling2D, Input, Lambda, Flatten, Dense
 
 
-def baseline(data_format, num_classes):
+def get_model(data_format, num_classes):
     ini_filters = 64
 
     inputs = Input(data_format)
@@ -54,6 +45,7 @@ def baseline(data_format, num_classes):
     model = BatchNormalization(momentum=0.9, axis=-1)(model)
     model = AveragePooling2D((1, 2), strides=(1, 2))(model)
 
+    import keras.backend as K
     model = Lambda(lambda x: K.mean(x, axis=1)[:, None, :, :])(model)
     model = Lambda(lambda x: K.max(x, axis=2))(model)
     model = Flatten()(model)
@@ -61,15 +53,6 @@ def baseline(data_format, num_classes):
 
     model = keras.models.Model(inputs=[inputs], outputs=[output])
     print(model.summary())
-
     return model
-
-
-def architecture(data_format, cfg):
-    """
-    Instantiates a network model for a given dictionary of input/output
-    tensor formats (dtype, shape) and a given configuration.
-    """
-    return baseline(data_format, cfg)
 
 

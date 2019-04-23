@@ -1,18 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
-"""
-Model definition for visibility condition classification experiment.
-Provides architecture().
-
-Author: Jan Schlüter, Fabian Paischer and Matthias Dorfer
-"""
-
 import keras
 from keras.layers import Conv2D, BatchNormalization, GlobalAveragePooling2D, Activation, MaxPooling2D, Dropout
 
 
-def cpjku_2018_cnn(data_format, num_classes):
+def get_model(data_format, num_classes):
 
     ini_filters = 64
 
@@ -75,13 +67,5 @@ def cpjku_2018_cnn(data_format, num_classes):
     print(model.summary())
 
     return model
-
-
-def architecture(data_format, cfg):
-    """
-    Instantiates a network model for a given dictionary of input/output
-    tensor formats (dtype, shape) and a given configuration.
-    """
-    return cpjku_2018_cnn(data_format, cfg)
 
 
