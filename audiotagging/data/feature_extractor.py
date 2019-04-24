@@ -14,7 +14,9 @@ parser.add_argument('--cqt', action='store_true')
 parser.add_argument('--centroids', action='store_true')
 parser.add_argument('--melspectrogram', action='store_true')
 parser.add_argument('--plot', action='store_true')
+parser.add_argument('--spec_weighting', action='store_true')
 args = parser.parse_args()
+
 
 def plot_spectrogram(spectrogram, title, type):
     print("Spectrogram Shape:", spectrogram.shape)
@@ -37,6 +39,7 @@ def normalize_features(features):
     normalized_features = (features - np.mean(features)) / np.std(features)
     return normalized_features
 
+
 def dump_cqt_specs(dirname):
     """
     Computes constant Q-transform and dumps results into according directory.
@@ -48,6 +51,10 @@ def dump_cqt_specs(dirname):
         `False` if we want to compute cqt to test clips.
     """
 
+    n_bins = 84
+    n_fft = 1024
+    sr = 32000
+    hop_length = 192
     files = os.listdir('../datasets/{}'.format(dirname))
 
     for file in tqdm.tqdm(files, 'Extracting stft features'):
@@ -60,16 +67,23 @@ def dump_cqt_specs(dirname):
         assert os.path.exists(
             '../datasets/{}/{}'.format(dirname, aug_audio_file)), "SOX Problem ... clipped wav does not exist!"
 
-        sr, data = wavfile.read('../datasets/{}/{}'.format(dirname, aug_audio_file))
+        data, sr = librosa.load('../datasets/{}/{}'.format(dirname, aug_audio_file), sr=sr, mono=True)
 
         try:
-            spec = librosa.cqt(data.astype(np.float), sr=sr, n_bins=84)
+            cqt = librosa.core.cqt(data, sr=sr, hop_length=hop_length, n_bins=n_bins, pad_mode='reflect',
+                                   fmin=librosa.note_to_hz('A1'))
         except:
             print('File was clipped to zero length - using original file: ', file)
-            sr, data = wavfile.read('../datasets/{}/{}'.format(dirname, file))
-            spec = librosa.cqt(data.astype(np.float), sr=sr, n_bins=84)
+            data, sr = librosa.load('../datasets/{}/{}'.format(dirname, file), sr=sr, mono=True)
+            cqt = librosa.core.cqt(data, sr=sr, hop_length=hop_length, n_bins=n_bins, pad_mode='reflect',
+                                   fmin=librosa.note_to_hz('A1'))
 
-        spec = np.abs(spec)
+        # keep only amplitudes
+        cqt = np.abs(cqt)
+
+        if args.spec_weighting:
+            freqs = librosa.cqt_frequencies(n_bins, fmin=librosa.note_to_hz('A1'))
+            cqt = librosa.perceptual_weighting(cqt ** 2, freqs, ref=np.max)
 
         if args.plot:
             sr, orig_data = wavfile.read('../datasets/{}/{}'.format(dirname, file))
@@ -79,7 +93,7 @@ def dump_cqt_specs(dirname):
             plot_spectrogram(spec_orig, 'Original CQT Spectrogram', 'cqt')
             plot_spectrogram(spec, 'CQT Spectrogram after silence clipping', 'cqt')
 
-        spec = normalize_features(spec)
+        spec = normalize_features(cqt)
 
         if args.plot:
             plot_spectrogram(spec, 'CQT Spectrogram Normalized', 'cqt')
@@ -87,8 +101,13 @@ def dump_cqt_specs(dirname):
 
         if not os.path.exists('../features/cqt/{}'.format(dirname)):
             os.makedirs('../features/cqt/{}'.format(dirname))
+        if not os.path.exists('../features/cqt_weighted/{}'.format(dirname)):
+            os.makedirs('../features/cqt_weighted/{}'.format(dirname))
 
-        np.save('../features/cqt/{}/{}'.format(dirname, file.split('.')[0]), spec)
+        if args.spec_weighting:
+            np.save('../features/cqt_weighted/{}/{}'.format(dirname, file.split('.')[0]), cqt)
+        else:
+            np.save('../features/cqt/{}/{}'.format(dirname, file.split('.')[0]), cqt)
 
 
 def dump_mel_specs(dirname):
@@ -129,10 +148,17 @@ def dump_mel_specs(dirname):
             stft = librosa.stft(data, n_fft=n_fft, hop_length=hop_length, win_length=None, window='hann', center=True,
                                 pad_mode='reflect')
 
+        # keep only amplitudes of spectrograms
         stft = np.abs(stft)
-        stft = np.log10(stft+1)
-        spec = librosa.feature.melspectrogram(S=stft, sr=sr, n_mels=n_mels, fmax=fmax)
 
+        if args.spec_weighting:
+            freqs = librosa.core.fft_frequencies(sr=sr, n_fft=n_fft)
+            stft = librosa.perceptual_weighting(stft**2, freqs, ref=1.0, amin=1e-10, top_db=99.0)
+        else:
+            stft = np.log10(stft+1)
+
+        # apply mel filterbank
+        spec = librosa.feature.melspectrogram(S=stft, sr=sr, n_mels=n_mels, fmax=fmax)
 
         if args.plot:
             orig_data, sr = librosa.load('../datasets/{}/{}'.format(dirname, file), sr=sr, mono=True)
@@ -147,7 +173,7 @@ def dump_mel_specs(dirname):
             plot_spectrogram(spec, 'Mel Spectrogram after silence clipping', 'mel')
 
         spec = normalize_features(spec)
-
+        os.remove('../datasets/{}/{}'.format(dirname, aug_audio_file))
 
         if args.plot:
             plot_spectrogram(spec, 'Mel Spectrogram Normalized', 'mel')
@@ -155,8 +181,14 @@ def dump_mel_specs(dirname):
 
         if not os.path.exists('../features/mel/{}'.format(dirname)):
             os.makedirs('../features/mel/{}'.format(dirname))
+        if not os.path.exists('../features/mel_weighted/{}'.format(dirname)):
+            os.makedirs('../features/mel_weighted/{}'.format(dirname))
 
-        np.save('../features/mel/{}/{}'.format(dirname, file.split('.')[0]), spec)
+        if args.spec_weighting:
+            np.save('../features/mel_weighted/{}/{}'.format(dirname, file.split('.')[0]), spec)
+        else:
+            np.save('../features/mel/{}/{}'.format(dirname, file.split('.')[0]), spec)
+
 
 def dump_mfcc_features(dirname):
     """
@@ -191,6 +223,7 @@ def dump_mfcc_features(dirname):
             os.makedirs('../features/mfcc/{}'.format(dirname))
 
         np.save('../features/mfcc/{}/{}'.format(dirname, file.split('.')[0]), mfcc)
+
 
 def dump_spectral_centroids(dirname):
     """
@@ -243,6 +276,7 @@ def main():
         if not os.path.exists('../features/centroids'):
             os.makedirs('../features/centroids/{}'.format(dirname))
         dump_spectral_centroids(dirname)
+
 
 if __name__ == '__main__':
     main()
