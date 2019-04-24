@@ -5,11 +5,11 @@ from audiotagging.models import cvssp
 from audiotagging.data import DcaseAudioTagging
 
 
-def lwlrap(y_true, y_pred):     # TODO: needs a fix
+def lwlrap(y_true, y_pred): 
     import keras.backend as K
     _, num_classes = K.int_shape(y_pred)
     # K.arange hack
-    idx = K.cumsum(K.ones_like(y_pred, dtype='int32'))
+    idx = K.cumsum(K.ones_like(y_pred, dtype='int32'), axis=0) - 1
     # sort predicted probabilities
     ordering = K.tf.argsort(y_pred, axis=-1)[:, ::-1]
     reorder = K.tf.argsort(ordering, axis=-1)
