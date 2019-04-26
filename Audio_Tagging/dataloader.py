@@ -185,23 +185,52 @@ def load_features(filelist, features, num_classes, feature_path='../features/',
 
     return np.asarray(X), np.asarray(y)
 
-def mixup_augmentation(X, y,  alpha=0.2):
+def mixup_augmentation(X, y,  alpha=0.2, p=0.5):
+
+    if np.random.random() < p:
+
+        batch_size, h, w, c = X.shape
+        l = np.random.beta(alpha, alpha, batch_size)
+        X_l = l.reshape(batch_size, 1, 1, 1)
+        y_l = l.reshape(batch_size, 1)
+
+        # mix observations
+        X1, X2 = X[:], X[::-1]
+        X = X1 * X_l + X2 * (1.0 - X_l)
+        one_hot = y
+
+        # mix labels
+        y1 = one_hot[:]
+        y2 = one_hot[::-1]
+        y = y1 * y_l +  y2 * (1.0 - y_l)
+
+        return X.astype(np.float32), y.astype(np.float32)
+
+    else:
+        return X, y
+
+def concat_mixup_augmentation(X, y, alpha=0.2, p=0.5):
+
     batch_size, h, w, c = X.shape
-    l = np.random.beta(alpha, alpha, batch_size)
-    X_l = l.reshape(batch_size, 1, 1, 1)
-    y_l = l.reshape(batch_size, 1)
+    if np.random.random() < p:
+        l = np.random.beta(alpha, alpha, batch_size)
+        y_l = l.reshape(batch_size, 1)
 
-    # mix observations
-    X1, X2 = X[:], X[::-1]
-    X = X1 * X_l + X2 * (1.0 - X_l)
-    one_hot = y
+        # mix observations
+        X1 = X[:]
+        X2 = X[::-1]
+        w1 = int(w * (1.0-alpha))
+        X = np.concatenate((X1[:, :, :w1, :], X2[:,:,w1::,:]), axis=1)
 
-    # mix labels
-    y1 = one_hot[:]
-    y2 = one_hot[::-1]
-    y = y1 * y_l +  y2 * (1.0 - y_l)
+        # mix labels
+        one_hot = y
+        y1 = one_hot[:]
+        y2 = one_hot[::-1]
+        y = y1 * y_l + y2 * (1.0 - y_l)
 
-    return X.astype(np.float32), y.astype(np.float32)
+        return X.astype(np.float32), y.astype(np.float32)
+    else:
+        return X, y
 
 def load_batches(filelist, batchsize, feature_path='../features/', data_path='../datasets/',
                  shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel', test=False):
@@ -222,8 +251,9 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
                                      feature_path=feature_path, data_path=data_path)
                 X = X[:,:,:,np.newaxis]
 
-                if np.random.random() >= 0.5:
-                    X, y = mixup_augmentation(X, y)
+                X, y = mixup_augmentation(X, y, alpha=0.2, p=0.5)
+                X, y = concat_mixup_augmentation(X, y, alpha=0.2, p=0.5)
+                X, y = get_event_oversampling(X, y, n_bins=128)
 
                 yield (X, y)
             else:

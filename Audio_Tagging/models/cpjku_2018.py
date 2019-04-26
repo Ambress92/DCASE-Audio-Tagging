@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import keras
-from keras.layers import Conv2D, BatchNormalization, GlobalAveragePooling2D, Activation, MaxPooling2D, Dropout
-
+from keras.layers import Conv2D, BatchNormalization, GlobalAveragePooling2D, Activation, MaxPooling2D, Dropout, Lambda, Flatten, Dense
+import keras.backend as K
 
 def cpjku_2018_cnn(data_format, num_classes):
 
@@ -62,8 +62,12 @@ def cpjku_2018_cnn(data_format, num_classes):
 
     # classification block
     model.add(Conv2D(num_classes, (1, 1), strides=1, activation='relu', padding='same'))
-    model.add(GlobalAveragePooling2D(data_format='channels_last'))
-    model.add(Activation(activation='sigmoid'))
+    model.add(Lambda(lambda x: K.mean(x, axis=1)[:, None, :, :]))
+    model.add(Lambda(lambda x: K.max(x, axis=2)))
+    model.add(Flatten())
+    model.add(Dense(num_classes, activation='sigmoid'))
+    # model.add(GlobalAveragePooling2D(data_format='channels_last'))
+    # model.add(Activation(activation='sigmoid'))
 
     print(model.summary())
 
