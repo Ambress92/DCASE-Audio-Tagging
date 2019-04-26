@@ -24,7 +24,9 @@ def opts_parser():
             help='File to save the prediction curves to (.npy/.pkl format)',
             default=None, required=False)
     parser.add_argument('--filelist', type=str, help='filelist to predict the labels for', default='validation',
-                        required=False)
+                        required=False, choices=['validation', 'test'])
+    parser.add_argument('--level', type=str, help='predict on file level or on frame level', default='file',
+                        choices=['file', 'frame'])
     parser.add_argument('--features', default='mel', type=str, help='features to predict on', required=False)
     config.prepare_argument_parser(parser)
     return parser
@@ -55,7 +57,7 @@ def main():
     if options.filelist == 'validation':
         with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
             filelist = in_file.readlines()
-        batches = load_batches(filelist, cfg['batchsize'])
+        batches = load_batches(filelist, cfg['batchsize'], test=False, predict=True)
     else:
         filelist = os.listdir('../features/{}/test'.format(options.features))
         filelist = [file.replace('.npy', '') for file in filelist]
@@ -68,13 +70,22 @@ def main():
 
         for X in tqdm.tqdm(batches):
             preds = network.predict(x=X, batch_size=cfg['batchsize'], verbose=0)
-            predictions.append(np.average(preds, axis=0))
+            for i in range(0, len(X), cfg['n_frames']):
+                if options.level == 'file':
+                    predictions.append(np.average(preds[i:i+cfg['n_frames']], axis=0))
+                else:
+                    predictions.append(preds[i:i+cfg['n_frames']])
 
     else:
         for X, y  in tqdm.tqdm(batches, desc='Batch'):
             preds = network.predict(x=X, batch_size=cfg['batchsize'], verbose=0)
-            predictions.append(np.average(preds, axis=0))
-            truth.append(np.average(y, axis=0))
+            for i in range(0, len(X), cfg['n_frames']):
+                if options.level == 'file':
+                    predictions.append(np.average(preds[i:i+cfg['n_frames']], axis=0))
+                else:
+                    predictions.append(preds[i:i+cfg['n_frames']])
+                truth.append(np.average(y[i:i + cfg['n_frames']], axis=0))
+
 
     pred_dict = {}
     truth_dict = {}
@@ -86,10 +97,12 @@ def main():
     # save predictions
     print("Saving predictions")
     if options.filelist == 'validation':
-        np.save('predictions/{}_predictions_fold{}'.format(modelfile.split('/')[1].replace('.yaml', ''), fold), pred_dict)
-        np.save('predictions/{}_truth_fold{}'.format(modelfile.split('/')[1].replace('.yaml', ''), fold), truth_dict)
+        np.save('predictions/{}_predictions_{}_fold{}'.format(modelfile.split('/')[1].replace('.yaml', ''), options.level,
+                                                              fold), pred_dict)
+        if not os.path.exists('predictions/truth_{}_fold{}'.format(options.level, fold)):
+            np.save('predictions/truth_{}_fold{}'.format(options.level, fold), truth_dict)
     else:
-        np.save('predictions/{}_predictions_test'.format(modelfile.split('/')[1].replace('.yaml', ''), fold),
+        np.save('predictions/{}_predictions_{}_test'.format(modelfile.split('/')[1].replace('.yaml', ''), options.level),
                 np.asarray(pred_dict))
 
 

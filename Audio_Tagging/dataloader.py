@@ -233,7 +233,8 @@ def concat_mixup_augmentation(X, y, alpha=0.2, p=0.5):
         return X, y
 
 def load_batches(filelist, batchsize, feature_path='../features/', data_path='../datasets/',
-                 shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel', test=False):
+                 shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel', test=False,
+                 predict=False):
     num_datapoints = len(filelist)
 
     while True:
@@ -251,8 +252,9 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
                                      feature_path=feature_path, data_path=data_path)
                 X = X[:,:,:,np.newaxis]
 
-                # X, y = mixup_augmentation(X, y, alpha=0.2, p=0.5)
-                X, y = concat_mixup_augmentation(X, y, alpha=0.2, p=0.5)
+                if not predict:
+                    # X, y = mixup_augmentation(X, y, alpha=0.2, p=0.5)
+                    X, y = concat_mixup_augmentation(X, y, alpha=0.2, p=0.5)
 
                 yield (X, y)
             else:
