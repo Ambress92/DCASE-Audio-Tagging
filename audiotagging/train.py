@@ -1,8 +1,45 @@
 import os
 import keras
 
+from keras.callbacks import TensorBoard
 from audiotagging.models import cvssp
 from audiotagging.data import DcaseAudioTagging
+
+
+class TrainValidTB(TensorBoard):
+    # see https://stackoverflow.com/questions/47877475/keras-tensorboard-plot-train-and-validation-scalars-in-a-same-figure?rq=1
+    def __init__(self, path='../logs/', **kwargs):
+        # create subdirectories 'train' and 'valid'
+        train_log_dir = os.path.join(path, 'train')
+        super(TrainValidTB, self).__init__(train_log_dir, **kwargs)
+        self.val_log_dir = os.path.join(path, 'valid')
+
+    def set_model(self, model):
+        import keras.backend as K
+        # setup writer for validation metrics
+        self.val_writer = K.tf.summary.FileWriter(self.val_log_dir)
+        super(TrainValidTB, self).set_model(model)
+
+    def on_epoch_end(self, epoch, logs=None):
+        import keras.backend as K
+        # handle validation logs separately
+        logs = logs or {}
+        val_logs = {k.replace('val_', ''): v for k, v in logs.items() if k.startswith('val_')}
+        for name, value in val_logs.items():
+            summary = K.tf.Summary()
+            summary_value = summary.value.add()
+            summary_value.simple_value = value.item()
+            summary_value.tag = name
+            self.val_writer.add_summary(summary, epoch)
+        self.val_writer.flush()
+
+        # remaining logs are passed to super.on_epoch_end
+        logs = {k: v for k, v in logs.items() if not k.startswith('val_')}
+        super(TrainValidTB, self).on_epoch_end(epoch, logs)
+
+    def on_train_end(self, logs=None):
+        super(TrainValidTB, self).on_train_end(logs)
+        self.val_writer.close()
 
 
 def lwlrap(y_true, y_pred): 
@@ -30,7 +67,7 @@ def lwlrap(y_true, y_pred):
 
 if __name__ == '__main__':
     mel_len = 3000
-    epochs = 50
+    epochs = 20
 
     for train_fold, valid_fold in zip(
         ['fold{:d}_train'.format(i) for i in range(1, 5)],
@@ -41,9 +78,8 @@ if __name__ == '__main__':
         valid = DcaseAudioTagging(os.path.join('cv', valid_fold), curated=True, feature_length=mel_len,
                                   shuffle=False, path='../datasets')
 
-        checkpoint = keras.callbacks.ModelCheckpoint('../savemodels/cvssp.hdf5',
-                                                     save_best_only=True, save_weights_only=True)
-        tensorboard = keras.callbacks.TensorBoard('../logs/')
+        checkpoint = keras.callbacks.ModelCheckpoint('../savemodels/cvssp.hdf5')
+        tensorboard = TrainValidTB('../logs/')
         cbs = [checkpoint, tensorboard]
         model = cvssp.get_model([128, mel_len, 1], train.num_classes)
         model.compile('adam', 'binary_crossentropy', metrics=[lwlrap])
