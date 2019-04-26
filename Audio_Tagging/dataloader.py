@@ -251,9 +251,8 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
                                      feature_path=feature_path, data_path=data_path)
                 X = X[:,:,:,np.newaxis]
 
-                X, y = mixup_augmentation(X, y, alpha=0.2, p=0.5)
+                # X, y = mixup_augmentation(X, y, alpha=0.2, p=0.5)
                 X, y = concat_mixup_augmentation(X, y, alpha=0.2, p=0.5)
-                X, y = get_event_oversampling(X, y, n_bins=128)
 
                 yield (X, y)
             else:
