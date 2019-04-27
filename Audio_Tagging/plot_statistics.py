@@ -199,6 +199,7 @@ def main():
         plot_fold_distribution(fold)
     plot_single_label_dist()
     plot_multi_label_dist()
+    plot_spectrogram_lengths('mel', '../features/mel', 1)
 
 if __name__ == '__main__':
     main()

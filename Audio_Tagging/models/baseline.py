@@ -47,8 +47,6 @@ def baseline(data_format, num_classes):
     model = BatchNormalization(momentum=0.9, axis=-1)(model)
     model = AveragePooling2D((1, 2), strides=(1, 2))(model)
 
-    model = Lambda(lambda x: K.mean(x, axis=1)[:, None, :, :])(model)
-    model = Lambda(lambda x: K.max(x, axis=2))(model)
     model = Flatten()(model)
     output = Dense(num_classes, activation='sigmoid')(model)
 

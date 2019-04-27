@@ -88,7 +88,9 @@ def main():
         network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=['acc'])
 
         print("Preserving architecture and configuration ..")
-        save_model(os.path.join('models', modelfile.replace('.py', '')) + '_fold{}'.format(fold), network, cfg)
+        if not os.path.exists('models/{}'.format(cfg['features'])):
+            os.makedirs('models/{}'.format(cfg['features']))
+        save_model(os.path.join('models/{}'.format(cfg['features']), modelfile.replace('.py', '')) + '_fold{}'.format(fold), network, cfg)
 
         # Add batch creator, and training procedure
         val_loss = []
@@ -110,8 +112,8 @@ def main():
             epoch_lwlrap_train = []
             epoch_lwlrap_eval = []
 
-            train_batches = dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True)
-            eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False)
+            train_batches = dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True, features=cfg['features'])
+            eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'])
             steps_per_epoch = len(train_files) // cfg['batchsize']
 
             for _ in tqdm.trange(
@@ -165,7 +167,7 @@ def main():
                 if current_lwlrap > np.amax(lwlraps_eval):
                     epochs_without_decrase = 0
                     print("Average lwlrap increased - Saving weights...\n")
-                    network.save_weights("models/{}_fold{}.hd5".format(modelfile.replace('.py', ''), fold))
+                    network.save_weights("models/{}/{}_fold{}.hd5".format(cfg['features'], modelfile.replace('.py', ''), fold))
                 elif not cfg['linear_decay']:
                     epochs_without_decrase += 1
                     if epochs_without_decrase == cfg['epochs_without_decrease']:
@@ -184,14 +186,14 @@ def main():
                         print("Decreasing learning rate by {}...".format(cfg['lr_decrease']))
             else:
                 print("Average lwlrap increased - Saving weights...\n")
-                network.save_weights("models/{}_fold{}.hd5".format(modelfile.replace('.py', ''), fold))
+                network.save_weights("models/{}/{}_fold{}.hd5".format(cfg['features'], modelfile.replace('.py', ''), fold))
 
             lwlraps_eval.append(np.mean(epoch_lwlrap_eval))
 
             # Save loss and learning curve of trained model
-            save_learning_curve(train_acc, val_acc, "{}_fold{}_accuracy_learning_curve.pdf".format(modelfile.replace('.py', ''), fold), 'Accuracy', 'Accuracy')
-            save_learning_curve(train_loss, val_loss, "{}_fold{}_loss_curve.pdf".format(modelfile.replace('.py', ''), fold), 'Loss Curve', 'Loss')
-            save_learning_curve(lwlraps_train, lwlraps_eval, '{}_fold{}_lwlrap_curve.pdf'.format(modelfile.replace('.py', ''), fold),
+            save_learning_curve(train_acc, val_acc, "{}/{}_fold{}_accuracy_learning_curve.pdf".format(cfg['features'], modelfile.replace('.py', ''), fold), 'Accuracy', 'Accuracy')
+            save_learning_curve(train_loss, val_loss, "{}/{}_fold{}_loss_curve.pdf".format(cfg['features'], modelfile.replace('.py', ''), fold), 'Loss Curve', 'Loss')
+            save_learning_curve(lwlraps_train, lwlraps_eval, '{}/{}_fold{}_lwlrap_curve.pdf'.format(cfg['features'], modelfile.replace('.py', ''), fold),
                                 "Label Weighted Label Ranking Average Precision", 'lwlrap')
 
 

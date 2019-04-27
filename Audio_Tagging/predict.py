@@ -97,12 +97,12 @@ def main():
     # save predictions
     print("Saving predictions")
     if options.filelist == 'validation':
-        np.save('predictions/{}_predictions_{}_fold{}'.format(modelfile.split('/')[1].replace('.yaml', ''), options.level,
+        np.save('predictions/{}/{}_predictions_{}_fold{}'.format(cfg['features'], modelfile.split('/')[1].replace('.yaml', ''), options.level,
                                                               fold), pred_dict)
-        if not os.path.exists('predictions/truth_{}_fold{}'.format(options.level, fold)):
-            np.save('predictions/truth_{}_fold{}'.format(options.level, fold), truth_dict)
+        if not os.path.exists('predictions/{}/truth_{}_fold{}'.format(cfg['features'], options.level, fold)):
+            np.save('predictions/{}/truth_{}_fold{}'.format(cfg['features'], options.level, fold), truth_dict)
     else:
-        np.save('predictions/{}_predictions_{}_test'.format(modelfile.split('/')[1].replace('.yaml', ''), options.level),
+        np.save('predictions/{}/{}_predictions_{}_test'.format(cfg['features'], modelfile.split('/')[1].replace('.yaml', ''), options.level),
                 np.asarray(pred_dict))
 
 

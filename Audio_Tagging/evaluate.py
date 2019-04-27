@@ -116,7 +116,7 @@ def calculate_overall_lwlrap_sklearn(truth, scores):
       sample_weight=sample_weight[nonzero_weight_sample_indices])
   return overall_lwlrap
 
-def save_confusion_matrix(predictions, true_labels, model, normalize=False):
+def save_confusion_matrix(predictions, true_labels, model, features, normalize=False):
     cnf_matrix = confusion_matrix(true_labels, predictions)
     labels = np.unique(true_labels)
 
@@ -139,7 +139,7 @@ def save_confusion_matrix(predictions, true_labels, model, normalize=False):
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
-    plt.gcf().savefig('plots/confusion_matrix_{}.png'.format(model))
+    plt.gcf().savefig('plots/{}/confusion_matrix_{}.png'.format(features, model))
 
 def print_precision_recall_fscore(predictions, true_labels, counts, label_mapping):
     p,r,f,s = precision_recall_fscore_support(true_labels, predictions)
@@ -154,7 +154,7 @@ def print_precision_recall_fscore(predictions, true_labels, counts, label_mappin
     print("%9s  |  % 4d  |  %.2f  |  %.2f  |  %.3f   |" % ('average', np.sum(list(counts.values())), np.mean(p), np.mean(r), np.mean(f)))
     print('=' * 50)
 
-def plot_results_table(p, r, f, count, id_class_mapping, num_classes, clf):
+def plot_results_table(p, r, f, count, id_class_mapping, num_classes, clf, features):
     columns = ['CLASS', 'COUNT', 'PR', 'RE', 'F1']
     row_text = []
     classes = [id_class_mapping[c] for c in range(num_classes)]
@@ -197,9 +197,9 @@ def plot_results_table(p, r, f, count, id_class_mapping, num_classes, clf):
 
     fig.tight_layout()
 
-    plt.gcf().savefig('plots/{}_table.pdf'.format(clf))
+    plt.gcf().savefig('plots/{}/{}_table.pdf'.format(features, clf))
 
-def save_lwlrap_results_table(lwlrap, labels, weights, clf):
+def save_lwlrap_results_table(lwlrap, labels, weights, clf, features):
 
     latex_table = '% !TeX root = initial_structure.tex\n \
                   \\begin{tabular}{rrr}\n\
@@ -213,7 +213,7 @@ def save_lwlrap_results_table(lwlrap, labels, weights, clf):
 
     latex_table += "\\\\bottomrule\n\end{tabular}"
 
-    with open('plots/{}_lwlrap_latex_table.tex'.format(clf), "w") as latex_out:
+    with open('plots/{}/{}_lwlrap_latex_table.tex'.format(features, clf), "w") as latex_out:
         latex_out.write(latex_table)
 
 
@@ -269,6 +269,19 @@ def make_average_late_fusion(infiles):
 
     return initial_preds
 
+def plot_per_class_fscore(f, inv_label_mapping, exp_name, features):
+    labels = [inv_label_mapping[i] for i in range(len(f))]
+
+    plt.figure(figsize=(20,10))
+    plt.subplots_adjust(bottom=0.3)
+    plt.bar(labels, f)
+    plt.title('labelwise fscore measure')
+    plt.xlabel('Classes')
+    plt.ylabel('Fscore')
+    plt.xticks(np.arange(len(labels)), labels, rotation=90)
+    # plt.tight_layout()
+    plt.gcf().savefig('plots/' + features + '/' +exp_name + '_fscores.pdf')
+
 def main():
     # parse command line
     parser = opts_parser()
@@ -297,7 +310,7 @@ def main():
                     exp_name += infile[:infile.index('f')]
                 already_listed.append(infile[:infile.index('f')])
             exp_name += 'average_late_fusion_test'
-            np.save('predictions/{}'.format(exp_name), preds)
+            np.save('predictions/{}/{}'.format(cfg['features'], exp_name), preds)
             return
         else:
             for infile in infiles:
@@ -317,7 +330,7 @@ def main():
     preds_labels = [l for l in preds.values()]
     per_class_lwlrap, weights = calculate_per_class_lwlrap(np.asarray(truth_labels), np.asarray(preds_labels))
     lwlrap = calculate_overall_lwlrap_sklearn(np.asarray(truth_labels), np.asarray(preds_labels))
-    save_lwlrap_results_table(per_class_lwlrap, labels, weights, exp_name)
+    save_lwlrap_results_table(per_class_lwlrap, labels, weights, exp_name, cfg['features'])
     print('Model {} achieved an lwlrap of {}.'.format(infiles[0], lwlrap))
 
     # After calculating lwlrap we disentangle the multilabel predictions to single label predictions to calculate precision, recall and fscore
@@ -355,8 +368,9 @@ def main():
     truth_single_label = [np.argmax(t) for t in truth_single_label]
     p, r, f, s = precision_recall_fscore_support(truth_single_label, preds_single_label)
     print_precision_recall_fscore(preds_single_label, truth_single_label, true_counts, inv_label_mapping)
-    plot_results_table(p, r, f, true_counts, inv_label_mapping, cfg['num_classes'], exp_name)
-    save_confusion_matrix(preds_single_label, truth_single_label, exp_name)
+    plot_results_table(p, r, f, true_counts, inv_label_mapping, cfg['num_classes'], exp_name, cfg['features'])
+    save_confusion_matrix(preds_single_label, truth_single_label, exp_name, cfg['features'])
+    plot_per_class_fscore(f, inv_label_mapping, exp_name,  cfg['features'])
     # avg_precisions = np.mean([avg_precision(a, p) for a, p in zip(true_labels, preds)])
     # print('Average precision: {}'.format(avg_precisions))
 
