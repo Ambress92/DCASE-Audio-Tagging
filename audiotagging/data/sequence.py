@@ -5,7 +5,7 @@ from keras.utils import Sequence
 from scipy.io import wavfile
 
 
-def _read_label_dict(file_path):
+def read_label_dict(file_path):
     data = {}
     with open(file_path) as fp:
         fp.readline()
@@ -74,10 +74,10 @@ class DcaseAudioTagging(Sequence):
         labels = {}
         if curated is None or curated:
             file_path = os.path.join(path, 'train_curated.csv')
-            labels.update(_read_label_dict(file_path))
+            labels.update(read_label_dict(file_path))
         if not curated:
             file_path = os.path.join(path, 'train_noisy.csv')
-            labels.update(_read_label_dict(file_path))
+            labels.update(read_label_dict(file_path))
         unique_labels = {l for label in labels.values() for l in label}
         self.num_classes = len(unique_labels)
         self.label_map = {l: i for i, l in enumerate(sorted(unique_labels))}
@@ -132,9 +132,9 @@ class DcaseAudioTesting(Sequence):
         # read labels and set up label mapping
         labels = {}
         file_path = os.path.join(path, 'train_curated.csv')
-        labels.update(_read_label_dict(file_path))
+        labels.update(read_label_dict(file_path))
         file_path = os.path.join(path, 'train_noisy.csv')
-        labels.update(_read_label_dict(file_path))
+        labels.update(read_label_dict(file_path))
         unique_labels = {l for label in labels.values() for l in label}
         self.num_classes = len(unique_labels)
         self.label_map = {l: i for i, l in enumerate(sorted(unique_labels))}
