@@ -190,6 +190,9 @@ def main():
 
             lwlraps_eval.append(np.mean(epoch_lwlrap_eval))
 
+            if not os.path.exists('plots/{}'.format(cfg['features'])):
+                os.makedirs('plots/{}'.format(cfg['features']))
+
             # Save loss and learning curve of trained model
             save_learning_curve(train_acc, val_acc, "{}/{}_fold{}_accuracy_learning_curve.pdf".format(cfg['features'], modelfile.replace('.py', ''), fold), 'Accuracy', 'Accuracy')
             save_learning_curve(train_loss, val_loss, "{}/{}_fold{}_loss_curve.pdf".format(cfg['features'], modelfile.replace('.py', ''), fold), 'Loss Curve', 'Loss')

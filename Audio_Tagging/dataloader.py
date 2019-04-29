@@ -220,7 +220,7 @@ def concat_mixup_augmentation(X, y, alpha=0.2, p=0.5):
         X1 = X[:]
         X2 = X[::-1]
         w1 = int(w * (1.0-alpha))
-        X = np.concatenate((X1[:, :, :w1, :], X2[:,:,w1::,:]), axis=1)
+        X = np.concatenate((X1[:, :, :w1, :], X2[:,:,w1::,:]), axis=2)
 
         # mix labels
         one_hot = y
