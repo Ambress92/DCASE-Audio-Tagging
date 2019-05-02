@@ -26,6 +26,7 @@ def opts_parser():
                         type=str,
                         help='File to load the true labels from (.npz/.pkl format).')
     parser.add_argument('--test', help='Make late fusion on test set', action='store_true')
+    parser.add_argument('-features', type=str, help='for which features to use the predictions', required=True)
     config.prepare_argument_parser(parser)
     return parser
 
@@ -252,14 +253,14 @@ def print_maps(ap_sums, ap_counts, class_map=None):
     m_ap = map_sum / map_count
     print('Overall MAP: %.4f\n' % m_ap)
 
-def load_preds(file):
-    return np.load('predictions/{}'.format(file)).item()
+def load_preds(file, features):
+    return np.load('predictions/{}/{}'.format(features, file)).item()
 
-def make_average_late_fusion(infiles):
-    initial_preds = load_preds(infiles[0])
+def make_average_late_fusion(infiles, features):
+    initial_preds = load_preds(infiles[0], features)
     initial_preds = {k: initial_preds[k]/len(infiles) for k in initial_preds.keys()}
     for infile in infiles[1:]:
-        morepreds = load_preds(infile)
+        morepreds = load_preds(infile, features)
         for key in initial_preds.keys():
             initial_preds[key] += morepreds[key] / len(infiles)
         del morepreds
@@ -269,18 +270,18 @@ def make_average_late_fusion(infiles):
 
     return initial_preds
 
-def plot_per_class_fscore(f, inv_label_mapping, exp_name, features):
-    labels = [inv_label_mapping[i] for i in range(len(f))]
+def plot_per_class_metric(metric, inv_label_mapping, exp_name, features, metric_name):
+    labels = [inv_label_mapping[i] for i in range(len(metric))]
 
     plt.figure(figsize=(20,10))
     plt.subplots_adjust(bottom=0.3)
-    plt.bar(labels, f)
-    plt.title('labelwise fscore measure')
+    plt.bar(labels, metric)
+    plt.title('labelwise {} measure'.format(metric_name))
     plt.xlabel('Classes')
-    plt.ylabel('Fscore')
+    plt.ylabel('{}'.format(metric_name))
     plt.xticks(np.arange(len(labels)), labels, rotation=90)
     # plt.tight_layout()
-    plt.gcf().savefig('plots/' + features + '/' +exp_name + '_fscores.pdf')
+    plt.gcf().savefig('plots/{}/{}_{}.pdf'.format(features, exp_name, metric_name))
 
 def main():
     # parse command line
@@ -301,7 +302,7 @@ def main():
     exp_name = ''
     if len(infiles) > 1:
         # predictions need to be on frame wise level for late fusion
-        preds = make_average_late_fusion(infiles)
+        preds = make_average_late_fusion(infiles, options.features)
 
         if options.test:
             already_listed = []
@@ -319,10 +320,10 @@ def main():
 
     else:
         exp_name = re.match(r'(.*)_predictions.*', infiles[0]).group(1)
-        preds = load_preds(infiles[0])
+        preds = load_preds(infiles[0], options.features)
 
     clf_delta = 0.005
-    truth = load_preds(options.truth)
+    truth = load_preds(options.truth, options.features)
     true_labels = [l for t in truth.values() for l in np.nonzero(t > 0)[0]]
     true_counts = Counter(true_labels)
 
@@ -368,9 +369,10 @@ def main():
     truth_single_label = [np.argmax(t) for t in truth_single_label]
     p, r, f, s = precision_recall_fscore_support(truth_single_label, preds_single_label)
     print_precision_recall_fscore(preds_single_label, truth_single_label, true_counts, inv_label_mapping)
-    plot_results_table(p, r, f, true_counts, inv_label_mapping, cfg['num_classes'], exp_name, cfg['features'])
-    save_confusion_matrix(preds_single_label, truth_single_label, exp_name, cfg['features'])
-    plot_per_class_fscore(f, inv_label_mapping, exp_name,  cfg['features'])
+    plot_results_table(p, r, f, true_counts, inv_label_mapping, cfg['num_classes'], exp_name, options.features)
+    save_confusion_matrix(preds_single_label, truth_single_label, exp_name, options.features)
+    plot_per_class_metric(f, inv_label_mapping, exp_name,  options.features, metric_name='fscore')
+    plot_per_class_metric(per_class_lwlrap, inv_label_mapping, exp_name, options.features, metric_name='lwlrap')
     # avg_precisions = np.mean([avg_precision(a, p) for a, p in zip(true_labels, preds)])
     # print('Average precision: {}'.format(avg_precisions))
 

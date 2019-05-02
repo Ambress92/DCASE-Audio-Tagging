@@ -11,6 +11,7 @@ parser.add_argument('infile', nargs='+', metavar='INFILE',
                          'If ending in ":VALUE", will weight by VALUE.')
 parser.add_argument('--outfile', required=True, help='File to store the predictions in',
                     type=str)
+parser.add_argument('-features', required=True, type=str, help='For which features to merge test preds')
 args = parser.parse_args()
 
 def main():
@@ -20,7 +21,7 @@ def main():
     label_mapping, inv_label_mapping = get_label_mapping()
 
     for pred_file in infiles:
-        pred_dict = np.load('predictions/{}'.format(pred_file)).item()
+        pred_dict = np.load('predictions/{}/{}'.format(args.features, pred_file)).item()
         pred_dict_list.append(pred_dict)
 
     merged_file_dict = {}

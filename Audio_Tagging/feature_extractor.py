@@ -63,13 +63,10 @@ def dump_cqt_specs(dirname):
         '../datasets/{}/{}'.format(dirname, file), '../datasets/{}/{}'.format(dirname, aug_audio_file), aug_cmd)
         os.system(command)
 
-        try:
-            assert os.path.exists(
-                '../datasets/{}/{}'.format(dirname, aug_audio_file)), "SOX Problem ... clipped wav does not exist!"
+        assert os.path.exists('../datasets/{}/{}'.format(dirname, aug_audio_file)), "SOX Problem ... clipped wav does not exist!"
 
-            data, sr = librosa.load('../datasets/{}/{}'.format(dirname, aug_audio_file), sr=sr, mono=True)
-        except AssertionError:
-            print('File was clipped to zero length - using original file: ', file)
+        data, sr = librosa.load('../datasets/{}/{}'.format(dirname, aug_audio_file), sr=sr, mono=True)
+        if len(data) == 0:
             data, sr = librosa.load('../datasets/{}/{}'.format(dirname, file), sr=sr, mono=True)
 
         cqt = librosa.core.cqt(data, sr=sr, hop_length=hop_length, n_bins=n_bins, pad_mode='reflect',
@@ -134,11 +131,11 @@ def dump_mel_specs(dirname):
         command = "sox %s %s %s" % ('../datasets/{}/{}'.format(dirname, file), '../datasets/{}/{}'.format(dirname, aug_audio_file), aug_cmd)
         os.system(command)
 
-        try:
-            assert os.path.exists('../datasets/{}/{}'.format(dirname, aug_audio_file))
-            data, sr = librosa.load('../datasets/{}/{}'.format(dirname, aug_audio_file), sr=sr, mono=True)
-        except AssertionError:
-            print("SOX Problem ... clipped wav does not exist!")
+        assert os.path.exists('../datasets/{}/{}'.format(dirname, aug_audio_file)), "SOX Problem ... clipped wav does not exist!"
+
+        data, sr = librosa.load('../datasets/{}/{}'.format(dirname, aug_audio_file), sr=sr, mono=True)
+
+        if len(data) == 0:
             data, sr = librosa.load('../datasets/{}/{}'.format(dirname, file), sr=sr, mono=True)
 
         stft = librosa.stft(data, n_fft=n_fft, hop_length=hop_length, win_length=None, window='hann', center=True,
