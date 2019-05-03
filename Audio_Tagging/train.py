@@ -171,7 +171,7 @@ def main():
             current_acc = np.mean(batch_val_acc)
             current_lwlrap = np.mean(epoch_lwlrap_eval)
 
-            if epoch > 0:
+            if epoch > 1:
                 if current_lwlrap > np.amax(lwlraps_eval):
                     epochs_without_decrase = 0
                     print("Average lwlrap increased - Saving weights...\n")
