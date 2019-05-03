@@ -114,7 +114,7 @@ def unison_shuffled_copies(a, b):
     return a[p], b[p]
 
 def load_features(filelist, features, num_classes, feature_path='../features/',
-                    data_path='../datasets/', fixed_length=3132, n_frames=9):
+                    data_path='../datasets/', fixed_length=2784, n_frames=8):
     """
     Loads and returns audio features and their respective labels.
 
@@ -185,7 +185,7 @@ def load_features(filelist, features, num_classes, feature_path='../features/',
 
     return np.asarray(X), np.asarray(y)
 
-def mixup_augmentation(X, y,  alpha=0.2, p=0.5):
+def mixup_augmentation(X, y,  alpha=0.3, p=0.5):
 
     if np.random.random() < p:
 
@@ -209,7 +209,7 @@ def mixup_augmentation(X, y,  alpha=0.2, p=0.5):
     else:
         return X, y
 
-def concat_mixup_augmentation(X, y, alpha=0.2, p=0.5):
+def concat_mixup_augmentation(X, y, alpha=0.3, p=0.5):
 
     batch_size, h, w, c = X.shape
     if np.random.random() < p:
@@ -232,6 +232,27 @@ def concat_mixup_augmentation(X, y, alpha=0.2, p=0.5):
     else:
         return X, y
 
+def event_oversampling(X, n_frames=348):
+    batch_size, h, w, c = X.shape
+    X_new = np.zeros((batch_size, h, n_frames, c), dtype=np.float32)
+    for i in range(batch_size):
+        # compute frame sample probabilities
+        sample_probs = X[i, :, :, :].mean(axis=(0,2))
+        sample_probs -= sample_probs.min()
+        sample_probs /= sample_probs.sum()
+
+        # sample center frame
+        center_frame = np.random.choice(range(X.shape[2]), p = sample_probs)
+
+        # set sample window
+        start = center_frame - n_frames // 2
+        start = np.clip(start, 0, X.shape[2] - n_frames)
+        stop = start + n_frames
+
+        X_new[i] = X[i, :, :, start:stop]
+
+        return X_new
+
 def load_batches(filelist, batchsize, feature_path='../features/', data_path='../datasets/',
                  shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel', test=False,
                  predict=False):
@@ -253,8 +274,8 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
                 X = X[:,:,:,np.newaxis]
 
                 if not predict:
-                    # X, y = mixup_augmentation(X, y, alpha=0.2, p=0.5)
-                    X, y = concat_mixup_augmentation(X, y, alpha=0.2, p=0.5)
+                    X, y = mixup_augmentation(X, y, alpha=0.3, p=0.5)
+                    # X, y = concat_mixup_augmentation(X, y, alpha=0.2, p=0.5)
 
                 yield (X, y)
             else:

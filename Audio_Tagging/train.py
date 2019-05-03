@@ -62,12 +62,12 @@ def main():
 
     for fold in range(1,5):
         train_files = []
+        train_files_noisy = []
         eval_files = []
         with open('../datasets/cv/fold{}_curated_train'.format(fold), 'r') as in_file:
             train_files.extend(in_file.readlines())
-        # for f in range(1, 5):
-        #    with open('../datasets/cv/fold{}_noisy_train'.format(f), 'r') as in_file:
-        #        train_files.extend(in_file.readlines())
+        with open('../datasets/cv/fold{}_noisy_train'.format(fold), 'r') as in_file:
+            train_files_noisy.extend(in_file.readlines())
 
         with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
             eval_files.extend(in_file.readlines())
@@ -100,10 +100,11 @@ def main():
         epochs_without_decrase = 0
         lwlraps_eval = []
         lwlraps_train = []
+        switch_train_set = 5
 
         # run training loop
         print("Training:")
-        for epoch in range(cfg['epochs']):
+        for epoch in range(1, cfg['epochs']+1):
 
             epoch_train_loss = []
             epoch_train_acc = []
@@ -113,14 +114,21 @@ def main():
             epoch_lwlrap_eval = []
 
             train_batches = dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True, features=cfg['features'])
+            train_batches_noisy = dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True, infinite=True, features=cfg['features'])
             eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'])
-            steps_per_epoch = len(train_files) // cfg['batchsize']
+            if (epoch % switch_train_set) == 0:
+                steps_per_epoch = len(train_files_noisy) // cfg['batchsize']
+            else:
+                steps_per_epoch = len(train_files) // cfg['batchsize']
 
             for _ in tqdm.trange(
                     steps_per_epoch,
-                    desc='Epoch %d/%d:' % (epoch + 1, cfg['epochs'])):
+                    desc='Epoch %d/%d:' % (epoch, cfg['epochs'])):
 
-                X_train, y_train = next(train_batches)
+                if (epoch % switch_train_set) == 0:
+                    X_train, y_train = next(train_batches_noisy)
+                else:
+                    X_train, y_train = next(train_batches)
 
                 metrics = network.train_on_batch(x=X_train, y=y_train)
                 epoch_train_acc.append(metrics[1])
