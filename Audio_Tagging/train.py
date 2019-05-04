@@ -10,6 +10,7 @@ import tqdm
 import matplotlib.pyplot as plt
 from sklearn.metrics import label_ranking_average_precision_score
 import keras.backend as K
+from keras.models import load_model
 
 def opts_parser():
     descr = "Trains a neural network."
@@ -41,15 +42,15 @@ def lwlrap_metric(y_true, y_pred):
         sample_weight=sample_weight[nonzero_weight_sample_indices])
     return overall_lwlrap
 
-def save_model(modelfile, network, cfg):
+def save_model_params(modelfile, cfg):
     """
     Saves the learned weights to `filename`, and the corresponding
     configuration to ``os.path.splitext(filename)[0] + '.vars'``.
     """
     config.write_config_file(modelfile + '_auto.vars', cfg)
-    network_yaml = network.to_yaml()
-    with open(modelfile+".yaml", 'w') as yaml_file:
-        yaml_file.write(network_yaml)
+    # network_yaml = network.to_yaml()
+    # with open(modelfile+".yaml", 'w') as yaml_file:
+    #    yaml_file.write(network_yaml)
 
 def main():
     parser = opts_parser()
@@ -90,7 +91,7 @@ def main():
         print("Preserving architecture and configuration ..")
         if not os.path.exists('models/{}'.format(cfg['features'])):
             os.makedirs('models/{}'.format(cfg['features']))
-        save_model(os.path.join('models/{}'.format(cfg['features']), modelfile.replace('.py', '')) + '_fold{}'.format(fold), network, cfg)
+        save_model_params(os.path.join('models/{}'.format(cfg['features']), modelfile.replace('.py', '')) + '_fold{}'.format(fold), cfg)
 
         # Add batch creator, and training procedure
         val_loss = []
@@ -114,10 +115,10 @@ def main():
             epoch_lwlrap_eval = []
 
             train_batches = dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True, features=cfg['features'])
-            train_batches_noisy = dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True, infinite=True, features=cfg['features'])
+            train_batches_noisy = dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True, infinite=True, features=cfg['features'], augment=False)
             eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'])
             if (epoch % switch_train_set) == 0:
-                steps_per_epoch = len(train_files_noisy) // cfg['batchsize']
+                steps_per_epoch = cfg['epochsize']
             else:
                 steps_per_epoch = len(train_files) // cfg['batchsize']
 
@@ -125,7 +126,7 @@ def main():
                     steps_per_epoch,
                     desc='Epoch %d/%d:' % (epoch, cfg['epochs'])):
 
-                if (epoch % switch_train_set) == 0:
+                if (epoch % steps_per_epoch) == 0:
                     X_train, y_train = next(train_batches_noisy)
                 else:
                     X_train, y_train = next(train_batches)
@@ -172,10 +173,10 @@ def main():
             current_lwlrap = np.mean(epoch_lwlrap_eval)
 
             if epoch > 1:
-                if current_lwlrap > np.amax(lwlraps_eval):
+                if current_lwlrap > np.max(lwlraps_eval):
                     epochs_without_decrase = 0
                     print("Average lwlrap increased - Saving weights...\n")
-                    network.save_weights("models/{}/{}_fold{}.hd5".format(cfg['features'], modelfile.replace('.py', ''), fold))
+                    network.save("models/{}/{}_fold{}.hd5".format(cfg['features'], modelfile.replace('.py', ''), fold))
                 elif not cfg['linear_decay']:
                     epochs_without_decrase += 1
                     if epochs_without_decrase == cfg['epochs_without_decrease']:
@@ -185,16 +186,20 @@ def main():
                         print("lwlrap did not increase for the last {} epochs - halfing learning rate...".format(
                             cfg['epochs_without_decrease']))
                         epochs_without_decrase = 0
-
-                if cfg['linear_decay']:
+                else:
                     if epoch >= cfg['start_linear_decay']:
                         lr = keras.backend.get_value(network.optimizer.lr)
                         lr = lr - cfg['lr_decrease']
                         keras.backend.set_value(network.optimizer.lr, lr)
                         print("Decreasing learning rate by {}...".format(cfg['lr_decrease']))
+
+                if (epoch % switch_train_set) == 0 and current_lwlrap < np.max(lwlraps_eval):
+                    print('Lwlrap did not decrease after training on noisy data - resetting weights...')
+                    network = load_model("models/{}/{}_fold{}.hd5".format(cfg['features'], modelfile.replace('.py', ''), fold))
+
             else:
                 print("Average lwlrap increased - Saving weights...\n")
-                network.save_weights("models/{}/{}_fold{}.hd5".format(cfg['features'], modelfile.replace('.py', ''), fold))
+                network.save("models/{}/{}_fold{}.hd5".format(cfg['features'], modelfile.replace('.py', ''), fold))
 
             lwlraps_eval.append(np.mean(epoch_lwlrap_eval))
 

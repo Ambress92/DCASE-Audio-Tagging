@@ -11,6 +11,7 @@ import config
 from keras.models import model_from_yaml
 from dataloader import load_batches, load_features, load_test_features
 import re
+from keras.models import load_model
 
 
 def opts_parser():
@@ -40,16 +41,14 @@ def main():
     # parse config
     cfg = config.from_parsed_arguments(options)
 
-
     print("Preparing prediction function...")
-    # instantiate neural network
-    with open(modelfile, 'r') as yaml_file:
-        yaml_model = yaml_file.read()
-
-    network = model_from_yaml(yaml_model)
-
-    # load saved weights
-    network.load_weights(modelfile.replace('.yaml', '.hd5'))
+    if '.yaml' in modelfile:
+        with open(modelfile, 'r') as yaml_file:
+            yaml_model = yaml_file.read()
+        network = model_from_yaml(yaml_model)
+        network.load_weights(modelfile.replace('.yaml', '.hd5'))
+    else:
+        network = load_model(modelfile)
 
     # run prediction loop
     print("Predicting:")
@@ -57,7 +56,7 @@ def main():
     if options.filelist == 'validation':
         with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
             filelist = in_file.readlines()
-        batches = load_batches(filelist, cfg['batchsize'], test=False, predict=True)
+        batches = load_batches(filelist, cfg['batchsize'], test=False, augment=False)
     else:
         filelist = os.listdir('../features/{}/test'.format(options.features))
         filelist = [file.replace('.npy', '') for file in filelist]
