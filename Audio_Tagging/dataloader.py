@@ -276,7 +276,7 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
 
                 if augment:
                     # X, y = mixup_augmentation(X, y, alpha=0.3, p=0.25)
-                    X, y = concat_mixup_augmentation(X, y, alpha=0.3, p=0.33)
+                    X, y = concat_mixup_augmentation(X, y, alpha=0.3, p=0.5)
 
                 yield (X, y)
             else:
