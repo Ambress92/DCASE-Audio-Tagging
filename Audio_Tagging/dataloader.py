@@ -275,8 +275,8 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
                 X = X[:,:,:,np.newaxis]
 
                 if augment:
-                    X, y = mixup_augmentation(X, y, alpha=0.3, p=0.4)
-                    # X, y = concat_mixup_augmentation(X, y, alpha=0.2, p=0.5)
+                    # X, y = mixup_augmentation(X, y, alpha=0.3, p=0.25)
+                    X, y = concat_mixup_augmentation(X, y, alpha=0.3, p=0.33)
 
                 yield (X, y)
             else:

@@ -53,25 +53,28 @@ def main():
                yaml_model = yaml_file.read()
             network = model_from_yaml(yaml_model)
             network.load_weights(modelfile.replace('.yaml', '.hd5'))
-            optimizer = Adam(lr = cfg['verify_lr'])
+            optimizer = Adam(lr = cfg['finetune_lr'])
             network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=['acc'])
             modelfile.replace('.yaml', '')
         else:
             network = load_model("models/{}/{}_fold{}.hd5".format(cfg['features'], modelfile.replace('.py', ''), fold))
-            K.set_value(network.optimizer.lr, cfg['verify_lr'])
+            K.set_value(network.optimizer.lr, cfg['finetune_lr'])
             modelfile.replace('.py')
 
         verify_files_noisy = []
         validation_files = []
         with open('../datasets/cv/fold{}_noisy_eval'.format(fold), 'r') as in_file:
             verify_files_noisy.extend(in_file.readlines())
-        with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
-            validation_files.extend(in_file.readlines())
+        for f in range(1,5):
+            with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
+                validation_files.extend(in_file.readlines())
 
         print('Start self verification loop...')
         verified_frames = []
         verified_frame_labels = []
         label_count = {k:0 for k in label_mapping.keys()}
+        labels_per_epoch = cfg['labels_per_epoch']
+        lr_decay = cfg['finetune_lr']/(cfg['self_verify_epochs']-cfg['start_linear_decay_finetune']+1)
 
         accs = []
         losses = []
@@ -92,29 +95,29 @@ def main():
                 correctly_predicted = np.nonzero(np.argmax(predictions, axis=1) == np.argmax(y, axis=1))[0]
                 for i in correctly_predicted:
                     l = inv_label_mapping[np.argmax(y[i])]
-                    if label_count[l] < 20:
+                    if label_count[l] < labels_per_epoch:
                         verified_frames.append(X[i])
                         verified_frame_labels.append(y[i])
                         label_count[l] += 1
 
                 if current_lwlrap > 0.9:
-                    print('lwlrap is greater than 70%')
+                    print('lwlrap is greater than 90%')
                     if len(np.nonzero(y > 0)[0]) > 1:
                         labels = inv_label_mapping[np.nonzero(y > 0)[0]]
                         labels = [inv_label_mapping[l] for l in labels]
                         for l in labels:
-                            if label_count[l] < 20:
+                            if label_count[l] < labels_per_epoch:
                                 verified_frames.extend(X)
                                 verified_frame_labels.extend(y)
                                 label_count[l] += 1
                     else:
                         label = inv_label_mapping[np.nonzero(y > 0)[0]]
-                        if label_count[label] < 20:
+                        if label_count[label] < labels_per_epoch:
                             verified_frames.extend(X)
                             verified_frame_labels.extend(y)
                             label_count[label] += 1
-                if list(label_count.values()) == 20:
-                    print('40 labels for each class were added, starting fine tuning')
+                if list(label_count.values()) == labels_per_epoch:
+                    print('{} labels for each class were added, starting fine tuning'.format(labels_per_epoch))
                     break
 
 
@@ -167,7 +170,7 @@ def main():
                     network.save("models/{}/{}_fold{}.hd5".format(cfg['features'], modelfile.replace('.py', ''), fold))
                 if epoch >= cfg['start_linear_decay_finetune']:
                     lr = K.get_value(network.optimizer.lr)
-                    lr = lr - cfg['lr_decrease_finetune']
+                    lr = lr - lr_decay
                     K.set_value(network.optimizer.lr, lr)
                     print("Decreasing learning rate by {}...".format(cfg['lr_decrease']))
             else:
