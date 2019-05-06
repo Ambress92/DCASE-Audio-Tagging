@@ -117,18 +117,20 @@ def calculate_overall_lwlrap_sklearn(truth, scores):
       sample_weight=sample_weight[nonzero_weight_sample_indices])
   return overall_lwlrap
 
-def save_confusion_matrix(predictions, true_labels, model, features, normalize=False):
+def save_confusion_matrix(predictions, true_labels, model, features, inv_label_mapping, normalize=False):
     cnf_matrix = confusion_matrix(true_labels, predictions)
     labels = np.unique(true_labels)
+    labels = [inv_label_mapping[l] for l in labels]
 
     if normalize:
         cnf_matrix = cnf_matrix.astype(np.float) / cnf_matrix.sum(axis=1)[:, np.newaxis]
 
-    plt.figure(figsize=(15,15))
+    plt.figure(figsize=(20, 20))
     plt.imshow(np.log(cnf_matrix), interpolation='nearest', cmap=plt.get_cmap('Blues'))
     plt.title('Confusion Matrix')
-    plt.xticks(np.arange(len(labels)), labels, rotation=45)
+    plt.xticks(np.arange(len(labels)), labels, rotation=90)
     plt.yticks(np.arange(len(labels)), labels)
+    plt.subplots_adjust(bottom=0.3, left=0.3)
 
     fmt = '.2f' if normalize else 'd'
     thresh = cnf_matrix.max() / 2.
@@ -140,7 +142,7 @@ def save_confusion_matrix(predictions, true_labels, model, features, normalize=F
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
-    plt.gcf().savefig('plots/{}/confusion_matrix_{}.png'.format(features, model))
+    plt.gcf().savefig('plots/{}/{}_confusion_matrix.png'.format(features, model))
 
 def print_precision_recall_fscore(predictions, true_labels, counts, label_mapping):
     p,r,f,s = precision_recall_fscore_support(true_labels, predictions)
@@ -370,7 +372,7 @@ def main():
     p, r, f, s = precision_recall_fscore_support(truth_single_label, preds_single_label)
     print_precision_recall_fscore(preds_single_label, truth_single_label, true_counts, inv_label_mapping)
     plot_results_table(p, r, f, true_counts, inv_label_mapping, cfg['num_classes'], exp_name, options.features)
-    save_confusion_matrix(preds_single_label, truth_single_label, exp_name, options.features)
+    save_confusion_matrix(preds_single_label, truth_single_label, exp_name, options.features, inv_label_mapping)
     plot_per_class_metric(f, inv_label_mapping, exp_name,  options.features, metric_name='fscore')
     plot_per_class_metric(per_class_lwlrap, inv_label_mapping, exp_name, options.features, metric_name='lwlrap')
     # avg_precisions = np.mean([avg_precision(a, p) for a, p in zip(true_labels, preds)])
