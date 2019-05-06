@@ -28,7 +28,6 @@ def opts_parser():
                         required=False, choices=['validation', 'test'])
     parser.add_argument('--level', type=str, help='predict on file level or on frame level', default='file',
                         choices=['file', 'frame'])
-    parser.add_argument('--features', default='mel', type=str, help='features to predict on', required=False)
     config.prepare_argument_parser(parser)
     return parser
 
@@ -58,7 +57,7 @@ def main():
             filelist = in_file.readlines()
         batches = load_batches(filelist, cfg['batchsize'], test=False, augment=False)
     else:
-        filelist = os.listdir('../features/{}/test'.format(options.features))
+        filelist = os.listdir('../features/{}/test'.format(cfg['features']))
         filelist = [file.replace('.npy', '') for file in filelist]
         batches = load_batches(filelist, cfg['batchsize'], test=True)
 
@@ -98,13 +97,14 @@ def main():
     if not os.path.exists('predictions/{}'.format(cfg['features'])):
         os.makedirs('predictions/{}'.format(cfg['features']))
 
+    model_extension = modelfile[modelfile.index('.'):]
     if options.filelist == 'validation':
-        np.save('predictions/{}/{}_predictions_{}_fold{}'.format(cfg['features'], modelfile.split('/')[2].replace('.yaml', ''), options.level,
+        np.save('predictions/{}/{}_predictions_{}_fold{}'.format(cfg['features'], modelfile.split('/')[2].replace(model_extension, ''), options.level,
                                                               fold), pred_dict)
         if not os.path.exists('predictions/{}/truth_{}_fold{}'.format(cfg['features'], options.level, fold)):
             np.save('predictions/{}/truth_{}_fold{}'.format(cfg['features'], options.level, fold), truth_dict)
     else:
-        np.save('predictions/{}/{}_predictions_{}_test'.format(cfg['features'], modelfile.split('/')[2].replace('.yaml', ''), options.level),
+        np.save('predictions/{}/{}_predictions_{}_test'.format(cfg['features'], modelfile.split('/')[2].replace(model_extension, ''), options.level),
                 np.asarray(pred_dict))
 
 
