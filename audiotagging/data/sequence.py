@@ -15,10 +15,16 @@ def read_label_dict(file_path):
     return data
 
 
-def _read_raw(path):
+def _read_raw(path, feature_length):
     def _read(file):
         file_path = os.path.join(path, file + '.wav')
-        return wavfile.read(file_path)[1]
+        data = wavfile.read(file_path)[1].reshape(1, -1)
+
+        if data.shape[1] < feature_length:
+            pad_width = [(0, 0), (0, feature_length - data.shape[1])]
+            data = np.pad(data, pad_width, 'wrap')
+
+        return data
     return _read
 
 
@@ -46,6 +52,25 @@ def _read_mel(path, feature_length):
     return _read
 
 
+def _mixup(x, y, alpha=0.3):
+    # see mixup: Beyond Empirical Risk Minimization
+    batch_size = x.shape[0]
+    l = np.random.beta(alpha, alpha, batch_size)
+    x_l = l.reshape(batch_size, 1, 1, 1)
+    y_l = l.reshape(batch_size, 1)
+
+    # mix observations
+    x1, x2 = x[:], x[::-1]
+    x = x1 * x_l + x2 * (1.0 - x_l)
+    one_hot = y
+
+    # mix labels
+    y1, y2 = one_hot[:], one_hot[::-1]
+    y = y1 * y_l + y2 * (1.0 - y_l)
+
+    return x.astype(np.float32), y.astype(np.float32)
+
+
 class DcaseAudioTagging(Sequence):
 
     def __init__(self, filename, batch_size=16, curated=None, features='mel',
@@ -59,7 +84,7 @@ class DcaseAudioTagging(Sequence):
         self.feature_length = feature_length
 
         if features == 'raw':
-            self.read = _read_raw(path)
+            self.read = _read_raw(path, self.feature_length)
         elif features == 'mfcc':
             self.read = _read_mfcc(path)
         else:  # features == 'mel'
@@ -123,7 +148,7 @@ class DcaseAudioTesting(Sequence):
         self.feature_length = feature_length
 
         if features == 'raw':
-            self.read = _read_raw(path)
+            self.read = _read_raw(path, self.feature_length)
         elif features == 'mfcc':
             self.read = _read_mfcc(path)
         else:  # features == 'mel'

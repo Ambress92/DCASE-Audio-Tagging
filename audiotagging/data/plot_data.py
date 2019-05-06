@@ -158,6 +158,7 @@ def plot_single_label_dist():
                               counts_noisy[start:start + interval], start, start + interval, 'single_class_distribution')
         start += interval
 
+
 def plot_multi_label_dist():
     verified_files = read_label_dict('../../datasets/train_curated.csv')
     unverified_files = read_label_dict('../../datasets/train_noisy.csv')
