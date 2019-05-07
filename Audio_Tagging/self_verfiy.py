@@ -116,7 +116,7 @@ def main():
                             verified_frames.extend(X)
                             verified_frame_labels.extend(y)
                             label_count[label] += 1
-                if list(label_count.values()) == labels_per_epoch:
+                if (np.asarray(list(label_count.values())) == labels_per_epoch).all():
                     print('{} labels for each class were added, starting fine tuning'.format(labels_per_epoch))
                     break
 
