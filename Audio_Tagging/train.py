@@ -173,7 +173,8 @@ def main():
                         print("lwlrap did not increase for the last {} epochs - halfing learning rate...".format(
                             cfg['epochs_without_decrease']))
                         epochs_without_decrase = 0
-                else:
+
+                if cfg['linear_decay']:
                     if epoch >= cfg['start_linear_decay']:
                         lr = keras.backend.get_value(network.optimizer.lr)
                         lr = lr - lr_decay
