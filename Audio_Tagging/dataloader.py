@@ -15,9 +15,10 @@ def repeat_spectrogram(spec, fixed_length):
     return spec
 
 
-def divide_chunks(l, n):
-    for i in range(0, l.shape[1], n):
-        yield l[:, i:i + n]
+def divide_chunks(spec, frame_length, jump):
+    # Divide whole spectrogram into windows which overlap according to the jump parameter
+    for j in range(0, spec.shape[1], jump):
+        yield spec[:, j:j + frame_length]
 
 def sample_from_spec(spec, frame_size, n_frames):
     # sample frames of spectrogram randomly across the whole spectrogram
@@ -163,14 +164,15 @@ def load_features(filelist, features, num_classes, feature_path='../features/',
             labels = noisy_files_dict[file]
 
         if features != 'mfcc':
+            frame_size = int(fixed_length / n_frames)
             if data.shape[1] < fixed_length:
                 # repeat spectrogram and split into frames
                 data = repeat_spectrogram(data, fixed_length=fixed_length)
-                data = list(divide_chunks(data, int(fixed_length/n_frames)))
+                data = list(divide_chunks(data, frame_size, frame_size//2))
             else:
                 #spectrogram is too long - cut it to fixed length
                 data = data[:, :fixed_length]
-                data = list(divide_chunks(data, int(fixed_length/n_frames)))
+                data = list(divide_chunks(data, frame_size, frame_size//2))
 
         if len(labels) > 1:
             label = [label_mapping[l] for l in labels]
@@ -269,7 +271,7 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
                 X = X[:,:,:,np.newaxis]
 
                 if augment:
-                    mixup_augmentation(X, y)
+                    X, y = mixup_augmentation(X, y)
 
                 yield (X, y)
             else:
