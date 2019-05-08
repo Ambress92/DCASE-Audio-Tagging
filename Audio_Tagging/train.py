@@ -58,11 +58,15 @@ def main():
     # keras configurations
     keras.backend.set_image_data_format('channels_last')
 
-    for fold in range(1,5):
+    for fold in range(1, 5):
         train_files = []
+        train_files_noisy = []
         eval_files = []
         with open('../datasets/cv/fold{}_curated_train'.format(fold), 'r') as in_file:
             train_files.extend(in_file.readlines())
+        for f in range(1, 5):
+            with open('../datasets/cv/fold{}_noisy_train'.format(fold), 'r') as in_file:
+                train_files_noisy.extend(in_file.readlines())
 
         with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
             eval_files.extend(in_file.readlines())
@@ -96,6 +100,8 @@ def main():
         lwlraps_eval = []
         lwlraps_train = []
         lr_decay = K.get_value(network.optimizer.lr)/(cfg['epochs']-cfg['start_linear_decay']+1)
+        switch_train_set = cfg['switch_train_set']
+        lr = cfg['lr']
 
         # run training loop
         print("Training:")
@@ -111,15 +117,28 @@ def main():
             train_batches = dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True,
                                                     features=cfg['features'], n_frames=cfg['n_frames'],
                                                     fixed_length=cfg['fixed_size'])
+            train_noisy_batches = dataloader.load_batches(train_files_noisy, cfg['batchisze'], shuffle=True,
+                                                          infinite=True, n_frames=cfg['n_frames'], features=cfg['features'],
+                                                          fixed_length=cfg['fixed_size'])
             eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
                                                    n_frames=cfg['n_frames'], fixed_length=cfg['fixed_size'])
-            steps_per_epoch = len(train_files) // cfg['batchsize']
+            if (epoch % switch_train_set) == 0:
+                steps_per_epoch = len(train_files_noisy)//cfg['batchsize']
+            else:
+                steps_per_epoch = len(train_files) // cfg['batchsize']
+
 
             for _ in tqdm.trange(
                     steps_per_epoch,
                     desc='Epoch %d/%d:' % (epoch, cfg['epochs'])):
 
-                X_train, y_train = next(train_batches)
+                if (epoch % switch_train_set) == 0:
+                    X_train, y_train = next(train_noisy_batches)
+                    noisy_lr = K.get_value(network.optimizer.lr)/10
+                    K.set_value(network.optimizer.lr, noisy_lr)
+                else:
+                    K.set_value(network.optimizer.lr, lr)
+                    X_train, y_train = next(train_batches)
 
                 metrics = network.train_on_batch(x=X_train, y=y_train)
                 epoch_train_acc.append(metrics[1])
@@ -157,9 +176,6 @@ def main():
             print('Accuracy on validation set after epoch {}: {}'.format(epoch, np.mean(batch_val_acc)))
             print('Label weighted label ranking average precision on validation set after epoch {}: {}'.format(epoch,
                                                                                                    np.mean(epoch_lwlrap_eval)))
-
-            current_loss = np.mean(batch_val_loss)
-            current_acc = np.mean(batch_val_acc)
             current_lwlrap = np.mean(epoch_lwlrap_eval)
 
             if epoch > 1:
