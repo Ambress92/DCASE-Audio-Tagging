@@ -1,18 +1,18 @@
-import numpy as np
-np.random.seed(101)
-from dataloader import get_label_mapping
-from sklearn.metrics import precision_recall_fscore_support, confusion_matrix
-import matplotlib.pyplot as plt
+import os
+import re
+import config
 import itertools
+import dataloader
+import sklearn.metrics
+import numpy as np
+import matplotlib.pyplot as plt
+
 from collections import Counter
 from argparse import ArgumentParser
-import config
-import os
-import sklearn.metrics
-import dataloader
-import re
+from sklearn.metrics import precision_recall_fscore_support, confusion_matrix
 
-TOP_N = 3
+np.random.seed(101)
+
 
 def opts_parser():
     descr = "Evaluates predictions against ground truth."
@@ -64,6 +64,7 @@ def _one_sample_positive_class_precisions(scores, truth):
             (1 + class_rankings[pos_class_indices].astype(np.float)))
     return pos_class_indices, precision_at_hits
 
+
 # All-in-one calculation of per-class lwlrap.
 def calculate_per_class_lwlrap(truth, scores):
     """Calculate label-weighted label-ranking average precision.
@@ -106,6 +107,7 @@ def calculate_per_class_lwlrap(truth, scores):
 
 # Calculate the overall lwlrap using sklearn.metrics function.
 
+
 def calculate_overall_lwlrap_sklearn(truth, scores):
   """Calculate the overall lwlrap using sklearn.metrics.lrap."""
   # sklearn doesn't correctly apply weighting to samples with no labels, so just skip them.
@@ -116,6 +118,7 @@ def calculate_overall_lwlrap_sklearn(truth, scores):
       scores[nonzero_weight_sample_indices, :],
       sample_weight=sample_weight[nonzero_weight_sample_indices])
   return overall_lwlrap
+
 
 def save_confusion_matrix(predictions, true_labels, model, features, inv_label_mapping, normalize=False):
     cnf_matrix = confusion_matrix(true_labels, predictions)
@@ -144,6 +147,7 @@ def save_confusion_matrix(predictions, true_labels, model, features, inv_label_m
     plt.xlabel('Predicted label')
     plt.gcf().savefig('plots/{}/{}_confusion_matrix.png'.format(features, model))
 
+
 def print_precision_recall_fscore(predictions, true_labels, counts, label_mapping):
     p,r,f,s = precision_recall_fscore_support(true_labels, predictions)
     num_classes = len(counts)
@@ -156,6 +160,7 @@ def print_precision_recall_fscore(predictions, true_labels, counts, label_mappin
     print('-' * 50)
     print("%9s  |  % 4d  |  %.2f  |  %.2f  |  %.3f   |" % ('average', np.sum(list(counts.values())), np.mean(p), np.mean(r), np.mean(f)))
     print('=' * 50)
+
 
 def plot_results_table(p, r, f, count, id_class_mapping, num_classes, clf, features):
     columns = ['CLASS', 'COUNT', 'PR', 'RE', 'F1']
@@ -202,6 +207,7 @@ def plot_results_table(p, r, f, count, id_class_mapping, num_classes, clf, featu
 
     plt.gcf().savefig('plots/{}/{}_table.pdf'.format(features, clf))
 
+
 def save_lwlrap_results_table(lwlrap, labels, weights, clf, features):
 
     latex_table = '% !TeX root = initial_structure.tex\n \
@@ -220,43 +226,9 @@ def save_lwlrap_results_table(lwlrap, labels, weights, clf, features):
         latex_out.write(latex_table)
 
 
-def get_top_predicted_classes(predicted):
-    """
-    Computes the top N predicted classes given the prediction scores for all examples in a clip.
-    """
-    # see https://github.com/DCASE-REPO/dcase2018_baseline
-    predicted = np.average(predicted, axis=0)
-    predicted_classes = np.argsort(predicted)[::-1][:TOP_N]
-    return predicted_classes
-
-def avg_precision(actual=None, predicted=None):
-    """
-    Computes average label precision.
-    """
-    # see https://github.com/DCASE-REPO/dcase2018_baseline
-    for (i, p) in enumerate(predicted):
-        if actual == p:
-            return 1.0 / (i + 1.0)
-    return 0.0
-
-def print_maps(ap_sums, ap_counts, class_map=None):
-    """
-    Prints per-class and overall MAP.
-    """
-
-    map_count = 0
-    map_sum = 0.
-    print('\n')
-    for class_index in sorted(ap_counts.keys()):
-        m_ap = ap_sums[class_index] / ap_counts[class_index]
-        print('MAP for %s: %.4f' % (class_map[class_index], m_ap))
-        map_count += ap_counts[class_index]
-        map_sum += ap_sums[class_index]
-    m_ap = map_sum / map_count
-    print('Overall MAP: %.4f\n' % m_ap)
-
 def load_preds(file, features):
     return np.load('predictions/{}/{}'.format(features, file)).item()
+
 
 def make_average_late_fusion(infiles, features):
     initial_preds = load_preds(infiles[0], features)
@@ -272,6 +244,7 @@ def make_average_late_fusion(infiles, features):
 
     return initial_preds
 
+
 def plot_per_class_metric(metric, inv_label_mapping, exp_name, features, metric_name):
     labels = [inv_label_mapping[i] for i in range(len(metric))]
 
@@ -284,6 +257,7 @@ def plot_per_class_metric(metric, inv_label_mapping, exp_name, features, metric_
     plt.xticks(np.arange(len(labels)), labels, rotation=90)
     # plt.tight_layout()
     plt.gcf().savefig('plots/{}/{}_{}.pdf'.format(features, exp_name, metric_name))
+
 
 def main():
     # parse command line
@@ -298,7 +272,7 @@ def main():
     infiles = [infile.rsplit(':', 1)[0] for infile in infiles]
 
     # load and prep test data
-    label_mapping, inv_label_mapping = get_label_mapping()
+    label_mapping, inv_label_mapping = dataloader.get_label_mapping()
     labels = list(label_mapping.keys())
 
     exp_name = ''
