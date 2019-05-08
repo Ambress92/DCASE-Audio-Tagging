@@ -185,29 +185,24 @@ def load_features(filelist, features, num_classes, feature_path='../features/',
 
     return np.asarray(X), np.asarray(y)
 
-def mixup_augmentation(X, y,  alpha=0.3, p=0.5):
+def mixup_augmentation(X, y,  alpha=0.3):
 
-    if np.random.random() < p:
+    batch_size, h, w, c = X.shape
+    l = np.random.beta(alpha, alpha, batch_size)
+    X_l = l.reshape(batch_size, 1, 1, 1)
+    y_l = l.reshape(batch_size, 1)
 
-        batch_size, h, w, c = X.shape
-        l = np.random.beta(alpha, alpha, batch_size)
-        X_l = l.reshape(batch_size, 1, 1, 1)
-        y_l = l.reshape(batch_size, 1)
+    # mix observations
+    X1, X2 = X[:], X[::-1]
+    X = X1 * X_l + X2 * (1.0 - X_l)
+    one_hot = y
 
-        # mix observations
-        X1, X2 = X[:], X[::-1]
-        X = X1 * X_l + X2 * (1.0 - X_l)
-        one_hot = y
+    # mix labels
+    y1 = one_hot[:]
+    y2 = one_hot[::-1]
+    y = y1 * y_l +  y2 * (1.0 - y_l)
 
-        # mix labels
-        y1 = one_hot[:]
-        y2 = one_hot[::-1]
-        y = y1 * y_l +  y2 * (1.0 - y_l)
-
-        return X.astype(np.float32), y.astype(np.float32)
-
-    else:
-        return X, y
+    return X.astype(np.float32), y.astype(np.float32)
 
 def concat_mixup_augmentation(X, y, alpha=0.3, p=0.5):
 
@@ -273,6 +268,9 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
                                      feature_path=feature_path, data_path=data_path, fixed_length=fixed_length,
                                      n_frames=n_frames)
                 X = X[:,:,:,np.newaxis]
+
+                if augment:
+                    mixup_augmentation(X, y)
 
                 yield (X, y)
             else:
