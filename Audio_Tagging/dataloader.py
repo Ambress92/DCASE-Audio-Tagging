@@ -47,9 +47,9 @@ def get_unverified_files_dict(path='../datasets/'):
 
     return unverified_files_dict
 
-def get_total_file_dict():
-    curated_files = get_verified_files_dict()
-    noisy_files = get_unverified_files_dict()
+def get_total_file_dict(path='../datasets/'):
+    curated_files = get_verified_files_dict(path)
+    noisy_files = get_unverified_files_dict(path)
     return dict(curated_files, **noisy_files)
 
 def get_test_files_list():

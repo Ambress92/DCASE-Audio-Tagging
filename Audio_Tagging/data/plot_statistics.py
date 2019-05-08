@@ -1,11 +1,16 @@
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-import argparse
-from dataloader import get_verified_files_dict, get_unverified_files_dict, get_total_file_dict
-import numpy as np
-from collections import Counter
-from scipy.io import wavfile
 import os
+from collections import Counter
+
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.io import wavfile
+#import matplotlib
+#matplotlib.use("TkAgg")
+#from matplotlib import pyplot as plt
+
+from Audio_Tagging.dataloader import get_verified_files_dict, get_unverified_files_dict, get_total_file_dict
+
 
 def plot_spectrogram_lengths(feature, path, idx):
     """
@@ -46,7 +51,7 @@ def plot_spectrogram_lengths(feature, path, idx):
     print('Maximum: ' + str(max(lengths[:, idx])))
     print('Minimum: ' + str(min(lengths[:, idx])))
     print('Median: ' + str(np.median(lengths[:, idx])))
-    plt.gcf().savefig('plots/{}_lengths.png'.format(feature))
+    plt.gcf().savefig('../../plots/{}_lengths.png'.format(feature))
     plt.close()
 
 
@@ -60,12 +65,12 @@ def save_stacked_bar_plot(counts_verified, labels_verified, counts_unverified, s
     plt.ylabel('Frequency')
     plt.legend(loc='upper right')
     plt.tight_layout()
-    plt.gcf().savefig('plots/{}_{}_{}.png'.format(exp_name, start, end))
+    plt.gcf().savefig('../../plots/{}_{}_{}.png'.format(exp_name, start, end))
     plt.close()
 
 
 def plot_class_distribution():
-    verified_files = get_verified_files_dict()
+    verified_files = get_verified_files_dict('../../datasets/')
     labels = []
     for label in verified_files.values():
         current_labels = [l for l in label]
@@ -75,7 +80,7 @@ def plot_class_distribution():
     counter = Counter(labels)
     counts_verified = [counter[label] for label in unique_verified]
 
-    unverified_files = get_unverified_files_dict()
+    unverified_files = get_unverified_files_dict('../../datasets/')
     labels = []
     for label in unverified_files.values():
         current_labels = [l for l in label]
@@ -94,10 +99,10 @@ def plot_class_distribution():
 
 
 def plot_fold_distribution(fold):
-    file_dict = get_total_file_dict()
+    file_dict = get_total_file_dict('../../datasets/')
     label_dict = {}
 
-    with open('../datasets/cv/fold{}'.format(fold), 'r') as in_file:
+    with open('../../datasets/cv/fold{}'.format(fold), 'r') as in_file:
         filelist = in_file.readlines()
 
     for file in filelist:
@@ -132,12 +137,13 @@ def plot_fold_distribution(fold):
     plt.xlabel('Classes')
     plt.ylabel('Frequency')
     plt.tight_layout()
-    plt.gcf().savefig('plots/class_distribution_fold_{}.png'.format(fold))
+    plt.gcf().savefig('../../plots/class_distribution_fold_{}.png'.format(fold))
     plt.close()
 
+
 def plot_single_label_dist():
-    verified_files = get_verified_files_dict()
-    unverified_files = get_unverified_files_dict()
+    verified_files = get_verified_files_dict('../../datasets/')
+    unverified_files = get_unverified_files_dict('../../datasets/')
 
     verified_labels = []
     for labels in verified_files.values():
@@ -164,9 +170,10 @@ def plot_single_label_dist():
                               counts_noisy[start:start + interval], start, start + interval, 'single_class_distribution')
         start += interval
 
+
 def plot_multi_label_dist():
-    verified_files = get_verified_files_dict()
-    unverified_files = get_unverified_files_dict()
+    verified_files = get_verified_files_dict('../../datasets/')
+    unverified_files = get_unverified_files_dict('../../datasets/')
 
     verified_labels = []
     for labels in verified_files.values():
@@ -193,13 +200,10 @@ def plot_multi_label_dist():
                               counts_noisy[start:start + interval], start, start + interval, 'multi_class_distribution')
         start += interval
 
-def main():
+
+if __name__ == '__main__':
     plot_class_distribution()
     for fold in range(1,5):
         plot_fold_distribution(fold)
     plot_single_label_dist()
     plot_multi_label_dist()
-    plot_spectrogram_lengths('mel', '../features/mel', 1)
-
-if __name__ == '__main__':
-    main()
