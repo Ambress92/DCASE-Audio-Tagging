@@ -150,17 +150,17 @@ def main():
 
             print('Finetuning on self verified labels...')
             steps_per_epoch = len(verified_frames) // cfg['verify_batchsize']
-            verified_frames = np.asarray(verified_frames)
-            verified_frame_labels = np.asarray(verified_frame_labels)
-            verified_frames, verified_frame_labels = dataloader.unison_shuffled_copies(verified_frames, verified_frame_labels)
+            verified_frames_training = np.asarray(verified_frames)
+            verified_frame_labels_training = np.asarray(verified_frame_labels)
+            verified_frames_training, verified_frame_labels_training = dataloader.unison_shuffled_copies(verified_frames_training, verified_frame_labels_training)
             for i in tqdm.trange(
                     steps_per_epoch,
                     desc='Epoch %d/%d:' % (epoch, cfg['self_verify_epochs'])):
 
                 start = i*cfg['verify_batchsize']
                 end = i*cfg['verify_batchsize']+cfg['verify_batchsize']
-                X_train = verified_frames[start:end, :, :, :]
-                y_train = verified_frame_labels[start:end, :]
+                X_train = verified_frames_training[start:end, :, :, :]
+                y_train = verified_frame_labels_training[start:end, :]
 
                 network.train_on_batch(x=X_train, y=y_train)
 

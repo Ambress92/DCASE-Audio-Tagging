@@ -50,16 +50,6 @@ def save_model_params(modelfile, cfg):
     """
     config.write_config_file(modelfile + '_auto.vars', cfg)
 
-def IIC_loss(z, zt, C=80):
-    P = (tf.expand_dims(z, axis=2) * tf.expand_dims(zt, axis=1))
-    P = tf.reduce_sum(P, axis=0)
-    P = ((P + tf.transpose(P)) / 2) / tf.reduce_sum(P)
-    EPS = tf.fill(P.shape, sys.float_info.epsilon)
-    P = tf.where(P<EPS, EPS, P)
-    Pi = tf.reshape(tf.reduce_sum(P, axis=1), (C, 1))
-    Pj = tf.reshape(tf.reduce_sum(P, axis=0), (1,C))
-    return tf.reduce_sum(P * (tf.log(Pi) + tf.log(Pj) - tf.log(P)))
-
 def main():
     parser = opts_parser()
     options = parser.parse_args()
@@ -76,7 +66,7 @@ def main():
         with open('../datasets/cv/fold{}_curated_train'.format(fold), 'r') as in_file:
             train_files.extend(in_file.readlines())
         for f in range(1, 5):
-            with open('../datasets/cv/fold{}_noisy_train'.format(fold), 'r') as in_file:
+            with open('../datasets/cv/fold{}_noisy_eval'.format(fold), 'r') as in_file:
                 train_files_noisy.extend(in_file.readlines())
 
         with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
@@ -95,7 +85,10 @@ def main():
         # Add optimizer and compile model
         print("Compiling model ...")
         optimizer = keras.optimizers.Adam(lr=cfg['lr'])
-        network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=['acc'])
+        if 'IIC' in modelfile:
+            network.compile(optimizer=optimizer, loss={'clf_output':cfg['loss']}, metrics=['acc'])
+        else:
+            network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=['acc'])
 
         print("Preserving architecture and configuration ..")
         if not os.path.exists('models/{}'.format(cfg['features'])):
