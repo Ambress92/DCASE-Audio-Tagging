@@ -26,7 +26,6 @@ def sample_from_spec(spec, frame_size, n_frames):
     for idx in start_idxs:
         yield spec[:, idx:idx+frame_size]
 
-
 def get_verified_files_dict(path='../datasets/'):
     with open(path+'train_curated.csv', 'r') as in_file:
         data_config = in_file.readlines()
@@ -169,9 +168,9 @@ def load_features(filelist, features, num_classes, feature_path='../features/',
                 data = repeat_spectrogram(data, fixed_length=fixed_length)
                 data = list(divide_chunks(data, int(fixed_length/n_frames)))
             else:
-                #spectrogram is too long - sample frames from spectrogram
-                frame_size = int(fixed_length/n_frames)
-                data = list(sample_from_spec(data, frame_size, n_frames))
+                #spectrogram is too long - cut it to fixed length
+                data = data[:, :fixed_length]
+                data = list(divide_chunks(data, int(fixed_length/n_frames)))
 
         if len(labels) > 1:
             label = [label_mapping[l] for l in labels]
