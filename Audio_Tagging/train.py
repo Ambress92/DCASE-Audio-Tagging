@@ -10,7 +10,8 @@ import tqdm
 import matplotlib.pyplot as plt
 from sklearn.metrics import label_ranking_average_precision_score
 import keras.backend as K
-from keras.models import load_model
+import tensorflow as tf
+import sys
 
 def opts_parser():
     descr = "Trains a neural network."
@@ -48,6 +49,16 @@ def save_model_params(modelfile, cfg):
     configuration to ``os.path.splitext(filename)[0] + '.vars'``.
     """
     config.write_config_file(modelfile + '_auto.vars', cfg)
+
+def IIC_loss(z, zt, C=80):
+    P = (tf.expand_dims(z, axis=2) * tf.expand_dims(zt, axis=1))
+    P = tf.reduce_sum(P, axis=0)
+    P = ((P + tf.transpose(P)) / 2) / tf.reduce_sum(P)
+    EPS = tf.fill(P.shape, sys.float_info.epsilon)
+    P = tf.where(P<EPS, EPS, P)
+    Pi = tf.reshape(tf.reduce_sum(P, axis=1), (C, 1))
+    Pj = tf.reshape(tf.reduce_sum(P, axis=0), (1,C))
+    return tf.reduce_sum(P * (tf.log(Pi) + tf.log(Pj) - tf.log(P)))
 
 def main():
     parser = opts_parser()

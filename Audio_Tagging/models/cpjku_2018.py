@@ -97,11 +97,11 @@ def cpjku_2018_cnn(data_format, num_classes):
     return model
 
 
-def architecture(data_format, cfg):
+def architecture(data_format, num_classes):
     """
     Instantiates a network model for a given dictionary of input/output
     tensor formats (dtype, shape) and a given configuration.
     """
-    return cpjku_2018_cnn(data_format, cfg)
+    return cpjku_2018_cnn(data_format, num_classes)
 
 
