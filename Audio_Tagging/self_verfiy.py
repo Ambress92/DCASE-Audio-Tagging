@@ -63,11 +63,11 @@ def main():
 
         verify_files_noisy = []
         validation_files = []
-        with open('../datasets/cv/fold{}_noisy_eval'.format(fold), 'r') as in_file:
-            verify_files_noisy.extend(in_file.readlines())
+        with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
+            validation_files.extend(in_file.readlines())
         for f in range(1,5):
-            with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
-                validation_files.extend(in_file.readlines())
+            with open('../datasets/cv/fold{}_noisy_eval'.format(fold), 'r') as in_file:
+                verify_files_noisy.extend(in_file.readlines())
 
         print('Start self verification loop...')
         verified_frames = []
@@ -144,6 +144,7 @@ def main():
             steps_per_epoch = len(verified_frames) // cfg['verify_batchsize']
             verified_frames = np.asarray(verified_frames)
             verified_frame_labels = np.asarray(verified_frame_labels)
+            verified_frames, verified_frame_labels = dataloader.unison_shuffled_copies(verified_frames, verified_frame_labels)
             for i in tqdm.trange(
                     steps_per_epoch,
                     desc='Epoch %d/%d:' % (epoch, cfg['self_verify_epochs'])):
