@@ -79,6 +79,7 @@ def main():
         accs = []
         losses = []
         lwlraps = []
+        threshold = 0.05
 
         for epoch in range(1,cfg['self_verify_epochs']+1):
             epoch_train_acc = []
@@ -87,18 +88,25 @@ def main():
 
             verify_noisy_batches = dataloader.load_batches_verification(verify_files_noisy, k=cfg['k'],
                                                                         shuffle=True, infinite=True,
-                                                                        features=cfg['features'])
+                                                                        features=cfg['features'], feature_width=cfg['feature_width'],
+                                                                        fixed_length=cfg['fixed_size'])
             print('Predict on noisy data...')
             for X, y in tqdm.tqdm(verify_noisy_batches, desc='Batch'):
                 predictions = network.predict(x=X, batch_size=cfg['verify_batchsize'], verbose=0)
                 current_lwlrap = lwlrap_metric(y, predictions)
-                correctly_predicted = np.nonzero(np.argmax(predictions, axis=1) == np.argmax(y, axis=1))[0]
-                for i in correctly_predicted:
-                    l = inv_label_mapping[np.argmax(y[i])]
-                    if label_count[l] < labels_per_epoch:
-                        verified_frames.append(X[i])
-                        verified_frame_labels.append(y[i])
-                        label_count[l] += 1
+                for i, preds in enumerate(zip(predictions, y)):
+                    p = preds[0]
+                    t = preds[1]
+                    true_labels = np.nonzero(t > 0)[0]
+                    predicted_labels = np.nonzero(p > np.max(p)-threshold)[0]
+
+                    for ind_t, ind_p in zip(true_labels, predicted_labels):
+                        if ind_t == ind_p:
+                            l = inv_label_mapping[ind_t]
+                            if label_count[l] < labels_per_epoch:
+                                verified_frames.append(X[i])
+                                verified_frame_labels.append(y[i])
+                                label_count[l] += 1
 
                 if current_lwlrap > 0.9:
                     print('lwlrap is greater than 90%')

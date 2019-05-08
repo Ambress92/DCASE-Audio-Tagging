@@ -17,13 +17,13 @@ def repeat_spectrogram(spec, fixed_length):
 
 def divide_chunks(spec, frame_length, jump):
     # Divide whole spectrogram into windows which overlap according to the jump parameter
-    for j in range(0, spec.shape[1], jump):
+    for j in range(0, spec.shape[1]-jump, jump):
         yield spec[:, j:j + frame_length]
 
-def sample_from_spec(spec, frame_size, n_frames):
+def sample_from_spec(spec, frame_size, feature_width):
     # sample frames of spectrogram randomly across the whole spectrogram
     frame_range = np.arange(0,spec.shape[1]-frame_size)
-    start_idxs = np.random.choice(frame_range, n_frames)
+    start_idxs = np.random.choice(frame_range, feature_width)
     for idx in start_idxs:
         yield spec[:, idx:idx+frame_size]
 
@@ -67,7 +67,7 @@ def get_test_files_list():
 
 
 def load_test_features(filelist, features, path='../features/',
-                        fixed_length=3132, n_frames=9):
+                        fixed_length=3132, feature_width=9):
     """
     Loads and returns test audio files.
 
@@ -82,7 +82,7 @@ def load_test_features(filelist, features, path='../features/',
     fixed_length : int
         Integer that restricts the final length of all features.
         Defaults to `3132`.
-    n_frames : int
+    feature_width : int
         Number of frames within a feature. Defaults to `9`.
 
     Returns
@@ -98,11 +98,11 @@ def load_test_features(filelist, features, path='../features/',
             if data.shape[1] < fixed_length:
                 # repeat spectrogram and split into frames
                 data = repeat_spectrogram(data, fixed_length=fixed_length)
-                data = list(divide_chunks(data, int(fixed_length / n_frames)))
+                data = list(divide_chunks(data, int(fixed_length / feature_width)))
             else:
                 # spectrogram is too long - sample frames from spectrogram
-                frame_size = int(fixed_length / n_frames)
-                data = list(sample_from_spec(data, frame_size, n_frames))
+                frame_size = int(fixed_length / feature_width)
+                data = list(sample_from_spec(data, frame_size, feature_width))
 
         X.extend(np.asarray(data))
 
@@ -114,7 +114,7 @@ def unison_shuffled_copies(a, b):
     return a[p], b[p]
 
 def load_features(filelist, features, num_classes, feature_path='../features/',
-                    data_path='../datasets/', fixed_length=2784, n_frames=8):
+                    data_path='../datasets/', fixed_length=2784, feature_width=348):
     """
     Loads and returns audio features and their respective labels.
 
@@ -133,7 +133,7 @@ def load_features(filelist, features, num_classes, feature_path='../features/',
     fixed_length : int
         Integer that restricts the final length of all features.
         Defaults to `3132`.
-    n_frames : int
+    feature_width : int
         Number of frames within a feature. Defaults to `9`.
 
     Returns
@@ -164,15 +164,14 @@ def load_features(filelist, features, num_classes, feature_path='../features/',
             labels = noisy_files_dict[file]
 
         if features != 'mfcc':
-            frame_size = int(fixed_length / n_frames)
             if data.shape[1] < fixed_length:
                 # repeat spectrogram and split into frames
                 data = repeat_spectrogram(data, fixed_length=fixed_length)
-                data = list(divide_chunks(data, frame_size, frame_size//2))
+                data = list(divide_chunks(data, feature_width, feature_width//2))
             else:
                 #spectrogram is too long - cut it to fixed length
                 data = data[:, :fixed_length]
-                data = list(divide_chunks(data, frame_size, frame_size//2))
+                data = list(divide_chunks(data, feature_width, feature_width//2))
 
         if len(labels) > 1:
             label = [label_mapping[l] for l in labels]
@@ -228,9 +227,9 @@ def concat_mixup_augmentation(X, y, alpha=0.3, p=0.5):
     else:
         return X, y
 
-def event_oversampling(X, n_frames=348):
+def event_oversampling(X, feature_width=348):
     batch_size, h, w, c = X.shape
-    X_new = np.zeros((batch_size, h, n_frames, c), dtype=np.float32)
+    X_new = np.zeros((batch_size, h, feature_width, c), dtype=np.float32)
     for i in range(batch_size):
         # compute frame sample probabilities
         sample_probs = X[i, :, :, :].mean(axis=(0,2))
@@ -241,9 +240,9 @@ def event_oversampling(X, n_frames=348):
         center_frame = np.random.choice(range(X.shape[2]), p = sample_probs)
 
         # set sample window
-        start = center_frame - n_frames // 2
-        start = np.clip(start, 0, X.shape[2] - n_frames)
-        stop = start + n_frames
+        start = center_frame - feature_width // 2
+        start = np.clip(start, 0, X.shape[2] - feature_width)
+        stop = start + feature_width
 
         X_new[i] = X[i, :, :, start:stop]
 
@@ -251,7 +250,7 @@ def event_oversampling(X, n_frames=348):
 
 def load_batches(filelist, batchsize, feature_path='../features/', data_path='../datasets/',
                  shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel', test=False,
-                 augment=True, n_frames=8, fixed_length=2784):
+                 augment=True, feature_width=348, fixed_length=2784):
     num_datapoints = len(filelist)
 
     while True:
@@ -267,7 +266,7 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
             if not test:
                 X, y = load_features(batch, features=features, num_classes=num_classes,
                                      feature_path=feature_path, data_path=data_path, fixed_length=fixed_length,
-                                     n_frames=n_frames)
+                                     feature_width=feature_width)
                 X = X[:,:,:,np.newaxis]
 
                 if augment:
@@ -283,7 +282,7 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
             break
 
 def load_batches_verification(filelist, feature_path='../features/', data_path='../datasets/',
-                 shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel', k=24, n_frames=8,
+                 shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel', k=24, feature_width=348,
                     fixed_length=2784):
     num_datapoints = len(filelist)
 
@@ -301,7 +300,7 @@ def load_batches_verification(filelist, feature_path='../features/', data_path='
 
                 X_temp, y_temp = load_features([file], features=features, num_classes=num_classes,
                                      feature_path=feature_path, data_path=data_path, fixed_length=fixed_length,
-                                     n_frames=n_frames)
+                                     feature_width=feature_width)
                 rand_ind = np.random.choice(X_temp.shape[0])
                 X_train.append(X_temp[rand_ind])
                 y_train.append(y_temp[rand_ind])
