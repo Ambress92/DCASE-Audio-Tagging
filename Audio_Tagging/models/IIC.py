@@ -89,7 +89,7 @@ def semi_supervised_IIC(input_shape, num_classes, final_act):
     dropout6_2 = Dropout(0.5)
 
     # clustering head
-    conv7 = Conv2D(num_classes, (1, 1), strides=1, activation='linear', padding='same', kernel_initializer='he_normal')
+    conv7 = Conv2D(num_classes, (1, 1), strides=1, activation='relu', padding='same', kernel_initializer='he_normal')
     lambda_7_1 = Lambda(lambda x: K.mean(x, axis=1))
     lambda_7_2 = Lambda(lambda x: K.max(x, axis=1))
     cluster_output1 = Activation(activation="softmax")
@@ -100,6 +100,7 @@ def semi_supervised_IIC(input_shape, num_classes, final_act):
     lambda_7_1_clf = Lambda(lambda x: K.mean(x, axis=1))
     lambda_7_2_clf = Lambda(lambda x: K.max(x, axis=1))
     output_clf = Activation(activation=final_act, name='clf_output')
+    output_clf_augmented = Activation(activation=final_act, name='clf_output_augmented')
 
     model = conv1_1(input)
     model = batch_norm1_1(model)
@@ -197,13 +198,19 @@ def semi_supervised_IIC(input_shape, num_classes, final_act):
     augmented_model = lambda_7_2(augmented_model)
     output2 = cluster_output2(augmented_model)
 
-    # classification block
+    # classification block for normal spectrogram
     clf_model = conv7_clf(clf_fork)
     clf_model = lambda_7_1_clf(clf_model)
     clf_model = lambda_7_2_clf(clf_model)
     clf_output = output_clf(clf_model)
 
-    model = Model(inputs=[input, augmented_input], outputs=[output1, output2, clf_output])
+    # classification block for augmented image
+    clf_model_augmented = conv7_clf(clf_fork)
+    clf_model_augmented = lambda_7_1_clf(clf_model_augmented)
+    clf_model_augmented = lambda_7_2_clf(clf_model_augmented)
+    clf_output_augmented = output_clf_augmented(clf_model_augmented)
+
+    model = Model(inputs=[input, augmented_input], outputs=[output1, output2, clf_output, clf_output_augmented])
 
     P = (tf.expand_dims(output1, axis=2) * tf.expand_dims(output2, axis=1))
     P = tf.reduce_sum(P, axis=0)

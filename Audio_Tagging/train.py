@@ -86,7 +86,8 @@ def main():
         print("Compiling model ...")
         optimizer = keras.optimizers.Adam(lr=cfg['lr'])
         if 'IIC' in modelfile:
-            network.compile(optimizer=optimizer, loss={'clf_output':cfg['loss']}, metrics=['acc'])
+            network.compile(optimizer=optimizer, loss={'clf_output':cfg['loss'], 'clf_output_augmented':cfg['loss']},
+                            loss_weights={'clf_output':1.0, 'clf_output_augmented':1.0}, metrics=['acc'])
         else:
             network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=['acc'])
 
@@ -120,12 +121,15 @@ def main():
 
             train_batches = dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True,
                                                     features=cfg['features'], feature_width=cfg['feature_width'],
-                                                    fixed_length=cfg['fixed_size'])
-            train_noisy_batches = dataloader.load_batches(train_files_noisy, cfg['batchisze'], shuffle=True,
+                                                    fixed_length=cfg['fixed_size'], sr=cfg['sr'],
+                                                    mixup=cfg['mixup'])
+            train_noisy_batches = dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True,
                                                           infinite=True, feature_width=cfg['feature_width'], features=cfg['features'],
-                                                          fixed_length=cfg['fixed_size'])
+                                                          fixed_length=cfg['fixed_size'], sr=cfg['sr'],
+                                                            mixup=cfg['mixup'])
             eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
-                                                   feature_width=cfg['feature_width'], fixed_length=cfg['fixed_size'])
+                                                   feature_width=cfg['feature_width'], fixed_length=cfg['fixed_size'], sr=cfg['sr'],
+                                                    mixup=cfg['mixup'])
             if (epoch % switch_train_set) == 0:
                 steps_per_epoch = len(train_files_noisy)//cfg['batchsize']
             else:

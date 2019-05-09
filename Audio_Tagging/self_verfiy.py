@@ -89,7 +89,8 @@ def main():
             verify_noisy_batches = dataloader.load_batches_verification(verify_files_noisy, k=cfg['k'],
                                                                         shuffle=True, infinite=True,
                                                                         features=cfg['features'], feature_width=cfg['feature_width'],
-                                                                        fixed_length=cfg['fixed_size'])
+                                                                        fixed_length=cfg['fixed_size'], sr=cfg['sr'],
+                                                                        mixup=cfg['verification_mixup'])
             print('Predict on noisy data...')
             for X, y in tqdm.tqdm(verify_noisy_batches, desc='Batch'):
                 predictions = network.predict(x=X, batch_size=cfg['verify_batchsize'], verbose=0)
