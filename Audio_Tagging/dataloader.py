@@ -231,7 +231,7 @@ def generate_in_background(generator, num_cached=10):
 
 def load_batches(filelist, batchsize, feature_path='../features/', data_path='../datasets/',
                  shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel', test=False,
-                 augment=True, feature_width=348, fixed_length=2784, sr=32000, mixup=True):
+                 augment=True, feature_width=348, fixed_length=2784, sr=32000, mixup=True, dump=False, already_saved=False):
     num_datapoints = len(filelist)
     curated_files = get_verified_files_dict(data_path)
 
@@ -253,7 +253,7 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
 
                 X, y = load_features(audio_clips, batch, features=features, num_classes=num_classes,
                                      data_path=data_path, fixed_length=fixed_length,
-                                     feature_width=feature_width, sr=sr, mixup=mixup)
+                                     feature_width=feature_width, sr=sr, mixup=mixup, dump=dump, already_saved=already_saved)
                 X = X[:,:,:,np.newaxis]
 
                 yield (X, y)
@@ -267,7 +267,7 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
 
 def load_batches_verification(filelist, feature_path='../features/', data_path='../datasets/',
                  shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel', k=24, feature_width=348,
-                    fixed_length=2784, sr=32000, mixup=False):
+                    fixed_length=2784, sr=32000, mixup=False, already_saved=False):
     num_datapoints = len(filelist)
     curated_files = get_verified_files_dict(data_path)
 
@@ -290,7 +290,7 @@ def load_batches_verification(filelist, feature_path='../features/', data_path='
 
                 X_temp, y_temp = load_features([audio_clips], filelist, features=features, num_classes=num_classes,
                                      data_path=data_path, fixed_length=fixed_length,
-                                     feature_width=feature_width, sr=sr, mixup=mixup)
+                                     feature_width=feature_width, sr=sr, mixup=mixup, already_saved=already_saved)
 
                 rand_ind = np.random.choice(X_temp.shape[0])
                 X_train.append(X_temp[rand_ind])
@@ -301,7 +301,20 @@ def load_batches_verification(filelist, feature_path='../features/', data_path='
         if not infinite:
             break
 
-def load_verified_files(filelist, sr, features=None, silence_clipping=True):
+def perform_silence_clipping(file):
+    # perform silence clipping
+    aug_cmd = "norm -0.1 silence 1 0.025 0.15% norm -0.1 reverse silence 1 0.025 0.15% reverse"
+    aug_audio_file = file.replace('.wav', '_clipped.wav')
+    command = "sox %s %s %s" % (
+        '../datasets/train_curated/{}'.format(file), '../datasets/train_curated/{}'.format(aug_audio_file),
+        aug_cmd)
+    os.system(command)
+
+    assert os.path.exists(
+        '../datasets/train_curated/{}'.format(aug_audio_file)), "SOX Problem ... clipped wav does not exist!"
+    return aug_audio_file
+
+def load_verified_files(filelist, sr, features=None, silence_clipping=True, already_saved=False):
     verified_files_dict = get_verified_files_dict()
 
     # load verified audio clips
@@ -310,19 +323,10 @@ def load_verified_files(filelist, sr, features=None, silence_clipping=True):
     for file in filelist:
         file = file.rstrip()+'.wav'
         label = verified_files_dict[file]
-        if not features:
+        if not already_saved:
             if silence_clipping:
-                # perform silence clipping
-                aug_cmd = "norm -0.1 silence 1 0.025 0.15% norm -0.1 reverse silence 1 0.025 0.15% reverse"
-                aug_audio_file = file.replace('.wav', '_clipped.wav')
-                command = "sox %s %s %s" % (
-                '../datasets/train_curated/{}'.format(file), '../datasets/train_curated/{}'.format(aug_audio_file),
-                aug_cmd)
-                os.system(command)
 
-                assert os.path.exists(
-                    '../datasets/train_curated/{}'.format(aug_audio_file)), "SOX Problem ... clipped wav does not exist!"
-
+                aug_audio_file = perform_silence_clipping(file)
                 data, sr = librosa.load('../datasets/train_curated/{}'.format(aug_audio_file), sr=sr, mono=True)
 
                 if len(data) == 0:
@@ -332,14 +336,14 @@ def load_verified_files(filelist, sr, features=None, silence_clipping=True):
 
             os.remove('../datasets/train_curated/{}'.format(aug_audio_file))
         else:
-            data = np.load('../features/{}/{}.npy'.format(features, file.replace('wav', features)))
+            data = np.load('../features/{}/{}.npy'.format(features, file.replace('.wav', '')))
 
         datapoints.append(data)
         labels.append(label)
 
     return (datapoints, labels)
 
-def load_unverified_files(filelist, sr, features=None, silence_clipping=True):
+def load_unverified_files(filelist, sr, features=None, silence_clipping=True, already_saved=False):
     unverified_files_dict = get_unverified_files_dict()
 
     # load unverified audio clips
@@ -348,21 +352,9 @@ def load_unverified_files(filelist, sr, features=None, silence_clipping=True):
     for file in filelist:
         file = file.rstrip() + '.wav'
         label = unverified_files_dict[file]
-        if not features:
+        if not already_saved:
             if silence_clipping:
-                # perform silence clipping
-                aug_cmd = "norm -0.1 silence 1 0.025 0.15% norm -0.1 reverse silence 1 0.025 0.15% reverse"
-                aug_audio_file = file.replace('.wav', '_clipped.wav')
-                command = "sox %s %s %s" % (
-                    '../datasets/train_noisy/{}'.format(file),
-                    '../datasets/train_noisy/{}'.format(aug_audio_file),
-                    aug_cmd)
-                os.system(command)
-
-                assert os.path.exists(
-                    '../datasets/train_noisy/{}'.format(
-                        aug_audio_file)), "SOX Problem ... clipped wav does not exist!"
-
+                aug_audio_file = perform_silence_clipping(file)
                 data, sr = librosa.load('../datasets/train_noisy/{}'.format(aug_audio_file), sr=sr, mono=True)
 
                 if len(data) == 0:
@@ -372,12 +364,35 @@ def load_unverified_files(filelist, sr, features=None, silence_clipping=True):
             else:
                 data, sr = librosa.load('../datasets/train_noisy/{}'.format(file), sr=sr)
         else:
-            data = np.load('../features/{}/{}.npy'.format(features, file.replace('wav', features)))
+            data = np.load('../features/{}/{}.npy'.format(features, file.replace('.wav', '')))
 
         datapoints.append(data)
         labels.append(label)
 
     return (datapoints, labels)
+
+def load_test_files(filelist, sr, features=None, silence_clipping=True, already_saved=False):
+    # load unverified audio clips
+    datapoints = []
+    for file in filelist:
+        file = file.rstrip() + '.wav'
+        if not already_saved:
+            if silence_clipping:
+                aug_audio_file = perform_silence_clipping(file)
+                data, sr = librosa.load('../datasets/test/{}'.format(aug_audio_file), sr=sr, mono=True)
+
+                if len(data) == 0:
+                    data, sr = librosa.load('../datasets/test/{}'.format(file), sr=sr, mono=True)
+
+                os.remove('../datasets/test/{}'.format(aug_audio_file))
+            else:
+                data, sr = librosa.load('../datasets/test/{}'.format(file), sr=sr)
+        else:
+            data = np.load('../features/{}/{}.npy'.format(features, file.replace('.wav', '')))
+
+        datapoints.append(data)
+
+    return datapoints
 
 def get_label_mapping(path='../datasets/'):
     with open(path+'train_curated.csv', 'r') as in_file:

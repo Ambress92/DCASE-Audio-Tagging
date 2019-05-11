@@ -26,7 +26,7 @@ def normalize_features(features):
 
 
 def get_cqt_specs(clips, filelist, sr=32000, spec_weighting=False, plot=False, dump=False, mixup=True, fixed_length=2784,
-                  test=False):
+                  test=False, already_saved=False):
     """
     Computes constant Q-transform and dumps results into according directory.
 
@@ -46,24 +46,45 @@ def get_cqt_specs(clips, filelist, sr=32000, spec_weighting=False, plot=False, d
         audio_clips = clips[0]
     else:
         audio_clips = clips
-    for clip, file in zip(audio_clips, filelist):
 
-        cqt = librosa.core.cqt(clip, sr=sr, hop_length=hop_length, n_bins=n_bins, pad_mode='reflect',
-                                   fmin=librosa.note_to_hz('A1'))
+    if not already_saved:
+        for clip, file in zip(audio_clips, filelist):
 
-        # keep only amplitudes
-        cqt = np.abs(cqt)
+            cqt = librosa.core.cqt(clip, sr=sr, hop_length=hop_length, n_bins=n_bins, pad_mode='reflect',
+                                       fmin=librosa.note_to_hz('A1'))
 
-        if cqt.shape[1] < fixed_length:
-            # repeat spectrogram and split into frames
-            cqt = repeat_spectrogram(cqt, fixed_length=fixed_length)
-        else:
-            # spectrogram is too long - cut it to fixed length
-            cqt = cqt[:, :fixed_length]
+            # keep only amplitudes
+            cqt = np.abs(cqt)
 
-        spectrograms.append(cqt)
+            if cqt.shape[1] < fixed_length:
+                # repeat spectrogram and split into frames
+                cqt = repeat_spectrogram(cqt, fixed_length=fixed_length)
+            else:
+                # spectrogram is too long - cut it to fixed length
+                cqt = cqt[:, :fixed_length]
 
-    spectrograms = np.asarray(spectrograms)
+            spectrograms.append(cqt)
+
+            if dump:
+                if not os.path.exists('../features/cqt/'):
+                    os.makedirs('../features/cqt/')
+                if not os.path.exists('../features/cqt_weighted/'):
+                    os.makedirs('../features/cqt_weighted/')
+
+                if spec_weighting:
+                    np.save('../features/cqt_weighted/{}'.format(file.split('.')[0]), cqt)
+                else:
+                    np.save('../features/cqt/{}'.format(file.split('.')[0]), cqt)
+
+        spectrograms = np.asarray(spectrograms)
+    else:
+        for file in filelist:
+            if spec_weighting:
+                spectrograms.append(np.load('../features/cqt_weighted/{}.npy'.format(file.split('.')[0])))
+            else:
+                spectrograms.append(np.load('../features/cqt/{}.npy'.format(file.split('.')[0])))
+        spectrograms = np.asarray(spectrograms)
+
     if mixup:
         x, labels = mixup_augmentation(spectrograms, clips[1], alpha=0.3)
     elif not test:
@@ -84,16 +105,6 @@ def get_cqt_specs(clips, filelist, sr=32000, spec_weighting=False, plot=False, d
         spec = normalize_features(cqt)
         spectrograms.append(spec)
 
-        if dump:
-            if not os.path.exists('../../features/cqt/'):
-                os.makedirs('../../features/cqt/')
-            if not os.path.exists('../../features/cqt_weighted/'):
-                os.makedirs('../../features/cqt_weighted/')
-
-            if spec_weighting:
-                np.save('../../features/cqt_weighted/{}'.format(file.split('.')[0]), cqt)
-            else:
-                np.save('../../features/cqt/{}'.format(file.split('.')[0]), cqt)
     if not dump:
         if not test:
             return np.asarray(spectrograms), labels
@@ -102,7 +113,7 @@ def get_cqt_specs(clips, filelist, sr=32000, spec_weighting=False, plot=False, d
 
 
 def get_mel_specs(clips, filelist, sr=32000, spec_weighting=False, plot=False, dump=False, mixup=True, fixed_length=2784,
-                  test=False):
+                  test=False, already_saved=False):
     """
     Computes Mel-scaled spectrogram and dumps results into according directory.
 
@@ -124,23 +135,43 @@ def get_mel_specs(clips, filelist, sr=32000, spec_weighting=False, plot=False, d
     else:
         audio_clips = clips
 
-    for clip in audio_clips:
-        stft = librosa.stft(clip, n_fft=n_fft, hop_length=hop_length, win_length=None, window='hann', center=True,
-                                pad_mode='reflect')
+    if not already_saved:
+        for clip, file in zip(audio_clips, filelist):
+            stft = librosa.stft(clip, n_fft=n_fft, hop_length=hop_length, win_length=None, window='hann', center=True,
+                                    pad_mode='reflect')
 
-        # keep only amplitudes of spectrograms
-        stft = np.abs(stft)
+            # keep only amplitudes of spectrograms
+            stft = np.abs(stft)
 
-        if stft.shape[1] < fixed_length:
-            # repeat spectrogram and split into frames
-            stft = repeat_spectrogram(stft, fixed_length=fixed_length)
-        else:
-            # spectrogram is too long - cut it to fixed length
-            stft = stft[:, :fixed_length]
+            if stft.shape[1] < fixed_length:
+                # repeat spectrogram and split into frames
+                stft = repeat_spectrogram(stft, fixed_length=fixed_length)
+            else:
+                # spectrogram is too long - cut it to fixed length
+                stft = stft[:, :fixed_length]
 
-        spectrograms.append(stft)
+            spectrograms.append(stft)
 
-    spectrograms = np.asarray(spectrograms)
+            if dump:
+                if not os.path.exists('../features/mel'):
+                    os.makedirs('../features/mel')
+                if not os.path.exists('../features/mel_weighted'):
+                    os.makedirs('../features/mel_weighted')
+
+                if spec_weighting:
+                    np.save('../features/mel_weighted/{}'.format(file.split('.')[0]), stft)
+                else:
+                    np.save('../features/mel/{}'.format(file.split('.')[0]), stft)
+
+        spectrograms = np.asarray(spectrograms)
+    else:
+        for file in filelist:
+            if spec_weighting:
+                spectrograms.append(np.load('../features/mel_weighted/{}.npy'.format(file.split('.')[0])))
+            else:
+                spectrograms.append(np.load('../features/mel/{}.npy'.format(file.split('.')[0])))
+        spectrograms = np.asarray(spectrograms)
+
     # apply mixup augmentation
     if mixup:
         x, labels = mixup_augmentation(spectrograms, clips[1], alpha=0.3)
@@ -151,7 +182,7 @@ def get_mel_specs(clips, filelist, sr=32000, spec_weighting=False, plot=False, d
         x = spectrograms
 
     spectrograms = []
-    for stft, file in zip(x, filelist):
+    for stft in x:
         if spec_weighting:
             freqs = librosa.core.fft_frequencies(sr=sr, n_fft=n_fft)
             stft = librosa.perceptual_weighting(stft**2, freqs, ref=1.0, amin=1e-10, top_db=99.0)
@@ -167,23 +198,13 @@ def get_mel_specs(clips, filelist, sr=32000, spec_weighting=False, plot=False, d
         spec = normalize_features(spec)
         spectrograms.append(spec)
 
-        if dump:
-            if not os.path.exists('../../features/mel'):
-                os.makedirs('../../features/mel')
-            if not os.path.exists('../../features/mel_weighted'):
-                os.makedirs('../../features/mel_weighted')
-
-            if spec_weighting:
-                np.save('../../features/mel_weighted/{}'.format(file.split('.')[0]), spec)
-            else:
-                np.save('../../features/mel/{}'.format(file.split('.')[0]), spec)
     if not dump:
         if not test:
             return np.asarray(spectrograms), labels
         else:
             return np.asarray(spectrograms)
 
-def get_mfcc_features(clips, filelist, sr=32000, spec_weighting=False, plot=False, dump=False):
+def get_mfcc_features(clips, filelist, sr=32000, spec_weighting=False, plot=False, dump=False, already_saved=False):
     """
     Computes MFCCs and dumps features into according directory.
 
@@ -209,14 +230,14 @@ def get_mfcc_features(clips, filelist, sr=32000, spec_weighting=False, plot=Fals
         mfccs.append(mfcc)
 
         if dump:
-            if not os.path.exists('../../features/mfcc/'):
-                os.makedirs('../../features/mfcc/')
+            if not os.path.exists('../features/mfcc/'):
+                os.makedirs('../features/mfcc/')
 
-            np.save('../../features/mfcc/{}'.format(file.split('.')[0]), mfcc)
+            np.save('../features/mfcc/{}'.format(file.split('.')[0]), mfcc)
     if not dump:
         return np.asarray(mfccs)
 
-def get_spectral_centroids(clips, filelist, sr=32000, dump=False):
+def get_spectral_centroids(clips, filelist, sr=32000, dump=False, already_saved=False):
     """
     Computes spectral centroid of audio samples and dumps results
     into according directory.
@@ -233,10 +254,10 @@ def get_spectral_centroids(clips, filelist, sr=32000, dump=False):
         cts = librosa.feature.spectral_centroid(clip.astype(np.float), sr)
 
         if dump:
-            if not os.path.exists('../../features/cts'):
-                os.makedirs('../../features/cts')
+            if not os.path.exists('../features/cts'):
+                os.makedirs('../features/cts')
 
-            np.save('../../features/{}/centroids/'.format(file.split('.')[0]), cts.T)
+            np.save('../features/{}/centroids/'.format(file.split('.')[0]), cts.T)
         else:
             centroids.append(cts)
 
