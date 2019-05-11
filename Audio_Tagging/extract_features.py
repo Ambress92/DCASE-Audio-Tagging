@@ -13,34 +13,58 @@ args = parser.parse_args()
 
 def main():
     print('Load and clip audio files')
+    if not os.path.exists('../features/{}'.format(args.features)):
+        os.makedirs('../features/{}'.format(args.features))
+
     if args.noisy:
         filelist = dataloader.get_verified_files_dict().keys()
         filelist = [f.rstrip().replace('.wav', '') for f in filelist]
-        files, _ = dataloader.load_unverified_files(filelist, args.sr, features=args.features, silence_clipping=True,
+        for i in tqdm.trange(len(filelist), 'Extracting features'):
+            audio, _ = dataloader.load_unverified_files([filelist[i]], args.sr, features=args.features, silence_clipping=True,
                                                  already_saved=False)
+            if args.features == 'mel':
+                feature_extractor.get_mel_specs([audio], [filelist[i]], sr=32000, spec_weighting=args.spec_weighting,
+                                        plot=False, dump=True, mixup=True,
+                                                fixed_length=2784, test=args.test, already_saved=False)
+            elif args.features == 'cqt':
+                feature_extractor.get_cqt_specs([audio], [filelist[i]], sr=32000, spec_weighting=args.spec_weighting,
+                                                    plot=False,
+                                                    dump=True, mixup=True,
+                                                    fixed_length=2784, test=args.test, already_saved=False)
 
     elif args.test:
         filelist = dataloader.get_test_files_list()
         filelist = [f.rstrip().replace('.wav', '') for f in filelist]
-        files = dataloader.load_test_files(filelist, args.sr, features=None, silence_clipping=True, already_saved=False)
+        for i in tqdm.trange(len(filelist), 'Extracting features'):
+            audio = dataloader.load_test_files([filelist[i]], args.sr, features=None, silence_clipping=True,
+                                               already_saved=False)
+            if args.features == 'mel':
+                feature_extractor.get_mel_specs([audio], [filelist[i]], sr=32000, spec_weighting=args.spec_weighting,
+                                                    plot=False, dump=True, mixup=True,
+                                                    fixed_length=2784, test=args.test, already_saved=False)
+            elif args.features == 'cqt':
+                feature_extractor.get_cqt_specs([audio], [filelist[i]], sr=32000, spec_weighting=args.spec_weighting,
+                                                plot=False,
+                                                dump=True, mixup=True,
+                                                fixed_length=2784, test=args.test, already_saved=False)
+
+
     else:
         filelist = dataloader.get_verified_files_dict().keys()
         filelist = [f.rstrip().replace('.wav', '') for f in filelist]
-        files, _ = dataloader.load_verified_files(filelist, args.sr, features=args.features, silence_clipping=True,
-                                                 already_saved=False)
 
-    if not os.path.exists('../features/{}'.format(args.features)):
-        os.makedirs('../features/{}'.format(args.features))
+        for i in tqdm.trange(len(filelist), 'Extracting features'):
+            audio, _ = dataloader.load_verified_files([filelist[i]], args.sr, features=args.features, silence_clipping=True,
+                                                      already_saved=False)
+            if args.features == 'mel':
+                feature_extractor.get_mel_specs([audio], [filelist[i]], sr=32000, spec_weighting=args.spec_weighting,
+                                                plot=False, dump=True, mixup=True,
+                                                fixed_length=2784, test=args.test, already_saved=False)
+            elif args.features == 'cqt':
+                feature_extractor.get_cqt_specs([audio], [filelist[i]], sr=32000, spec_weighting=args.spec_weighting,
+                                                plot=False,
+                                                dump=True, mixup=True,
+                                                fixed_length=2784, test=args.test, already_saved=False)
 
-    print('Extract and dump features...')
-    if args.features == 'mel':
-        for audio, file in tqdm.tqdm(zip(files, filelist), desc='Dumping features'):
-            feature_extractor.get_mel_specs([audio], file, sr=32000, spec_weighting=args.spec_weighting, plot=False, dump=True, mixup=True,
-                          fixed_length=2784, test=args.test, already_saved=False)
-    elif args.features == 'cqt':
-        for audio, file in tqdm.tqdm(zip(files, filelist), desc='Dumping features'):
-            feature_extractor.get_cqt_specs([audio], file, sr=32000, spec_weighting=args.spec_weighting, plot=False,
-                                            dump=True, mixup=True,
-                                            fixed_length=2784, test=args.test, already_saved=False)
 if __name__ == '__main__':
     main()
