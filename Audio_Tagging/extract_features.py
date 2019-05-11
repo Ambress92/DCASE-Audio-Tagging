@@ -17,7 +17,7 @@ def main():
         os.makedirs('../features/{}'.format(args.features))
 
     if args.noisy:
-        filelist = dataloader.get_verified_files_dict().keys()
+        filelist = dataloader.get_unverified_files_dict().keys()
         filelist = [f.rstrip().replace('.wav', '') for f in filelist]
         for i in tqdm.trange(len(filelist), desc='Extracting features'):
             audio = dataloader.load_unverified_files([filelist[i]], args.sr, features=args.features, silence_clipping=True,
