@@ -1,4 +1,5 @@
 import dataloader
+from dataloader import generate_in_background
 import numpy as np
 np.random.seed(101)
 import os
@@ -119,21 +120,23 @@ def main():
             epoch_lwlrap_train = []
             epoch_lwlrap_eval = []
 
-            train_batches = dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True,
-                                                    features=cfg['features'], feature_width=cfg['feature_width'],
-                                                    fixed_length=cfg['fixed_size'], sr=cfg['sr'],
-                                                    mixup=cfg['mixup'])
-            train_noisy_batches = dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True,
-                                                          infinite=True, feature_width=cfg['feature_width'], features=cfg['features'],
-                                                          fixed_length=cfg['fixed_size'], sr=cfg['sr'],
-                                                            mixup=cfg['mixup'])
-            eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
-                                                   feature_width=cfg['feature_width'], fixed_length=cfg['fixed_size'], sr=cfg['sr'],
-                                                    mixup=cfg['mixup'])
             if (epoch % switch_train_set) == 0:
                 steps_per_epoch = len(train_files_noisy)//cfg['batchsize']
             else:
                 steps_per_epoch = len(train_files) // cfg['batchsize']
+
+            train_batches = generate_in_background(dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True,
+                                                    features=cfg['features'], feature_width=cfg['feature_width'],
+                                                    fixed_length=cfg['fixed_size'], sr=cfg['sr'],
+                                                    mixup=cfg['mixup']), num_cached=steps_per_epoch)
+            train_noisy_batches = generate_in_background(dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True,
+                                                          infinite=True, feature_width=cfg['feature_width'], features=cfg['features'],
+                                                          fixed_length=cfg['fixed_size'], sr=cfg['sr'],
+                                                            mixup=cfg['mixup']), num_cached=steps_per_epoch)
+            eval_batches = generate_in_background(dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
+                                                   feature_width=cfg['feature_width'], fixed_length=cfg['fixed_size'], sr=cfg['sr'],
+                                                    mixup=cfg['mixup']), num_cached=steps_per_epoch)
+
 
 
             for _ in tqdm.trange(
@@ -141,12 +144,12 @@ def main():
                     desc='Epoch %d/%d:' % (epoch, cfg['epochs'])):
 
                 if (epoch % switch_train_set) == 0:
-                    X_train, y_train = next(dataloader.generate_in_background(train_noisy_batches))
+                    X_train, y_train = next(train_noisy_batches)
                     noisy_lr = K.get_value(network.optimizer.lr)/10
                     K.set_value(network.optimizer.lr, noisy_lr)
                 else:
                     K.set_value(network.optimizer.lr, lr)
-                    X_train, y_train = next(dataloader.generate_in_background(train_batches))
+                    X_train, y_train = next(train_batches)
 
                 metrics = network.train_on_batch(x=X_train, y=y_train)
                 epoch_train_acc.append(metrics[1])
@@ -165,7 +168,7 @@ def main():
             train_acc.append(np.mean(epoch_train_acc))
             lwlraps_train.append(np.mean(epoch_lwlrap_train))
 
-            for X_test, y_test in tqdm.tqdm(dataloader.generate_in_background(eval_batches), desc='Batch'):
+            for X_test, y_test in tqdm.tqdm(eval_batches, desc='Batch'):
 
                 metrics = network.test_on_batch(x=X_test, y=y_test)
 
