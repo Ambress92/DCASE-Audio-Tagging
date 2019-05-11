@@ -141,12 +141,12 @@ def main():
                     desc='Epoch %d/%d:' % (epoch, cfg['epochs'])):
 
                 if (epoch % switch_train_set) == 0:
-                    X_train, y_train = next(train_noisy_batches)
+                    X_train, y_train = next(dataloader.generate_in_background(train_noisy_batches))
                     noisy_lr = K.get_value(network.optimizer.lr)/10
                     K.set_value(network.optimizer.lr, noisy_lr)
                 else:
                     K.set_value(network.optimizer.lr, lr)
-                    X_train, y_train = next(train_batches)
+                    X_train, y_train = next(dataloader.generate_in_background(train_batches))
 
                 metrics = network.train_on_batch(x=X_train, y=y_train)
                 epoch_train_acc.append(metrics[1])
@@ -165,7 +165,7 @@ def main():
             train_acc.append(np.mean(epoch_train_acc))
             lwlraps_train.append(np.mean(epoch_lwlrap_train))
 
-            for X_test, y_test in tqdm.tqdm(eval_batches, desc='Batch'):
+            for X_test, y_test in tqdm.tqdm(dataloader.generate_in_background(eval_batches), desc='Batch'):
 
                 metrics = network.test_on_batch(x=X_test, y=y_test)
 
