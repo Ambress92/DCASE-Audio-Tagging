@@ -162,6 +162,7 @@ def get_mel_specs(clips, filelist, sr=32000, spec_weighting=False, plot=False, d
                     np.save('../features/mel_weighted/{}'.format(file.split('.')[0]), stft)
                 else:
                     np.save('../features/mel/{}'.format(file.split('.')[0]), stft)
+                return
 
         spectrograms = np.asarray(spectrograms)
     else:
