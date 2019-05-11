@@ -301,17 +301,17 @@ def load_batches_verification(filelist, feature_path='../features/', data_path='
         if not infinite:
             break
 
-def perform_silence_clipping(file):
+def perform_silence_clipping(file, dirname):
     # perform silence clipping
     aug_cmd = "norm -0.1 silence 1 0.025 0.15% norm -0.1 reverse silence 1 0.025 0.15% reverse"
     aug_audio_file = file.replace('.wav', '_clipped.wav')
     command = "sox %s %s %s" % (
-        '../datasets/train_curated/{}'.format(file), '../datasets/train_curated/{}'.format(aug_audio_file),
+        '../datasets/{}/{}'.format(dirname, file), '../datasets/{}/{}'.format(dirname, aug_audio_file),
         aug_cmd)
     os.system(command)
 
     assert os.path.exists(
-        '../datasets/train_curated/{}'.format(aug_audio_file)), "SOX Problem ... clipped wav does not exist!"
+        '../datasets/{}/{}'.format(dirname, aug_audio_file)), "SOX Problem ... clipped wav does not exist!"
     return aug_audio_file
 
 def load_verified_files(filelist, sr, features=None, silence_clipping=True, already_saved=False):
@@ -326,7 +326,7 @@ def load_verified_files(filelist, sr, features=None, silence_clipping=True, alre
         if not already_saved:
             if silence_clipping:
 
-                aug_audio_file = perform_silence_clipping(file)
+                aug_audio_file = perform_silence_clipping(file, 'train_curated')
                 data, sr = librosa.load('../datasets/train_curated/{}'.format(aug_audio_file), sr=sr, mono=True)
 
                 if len(data) == 0:
@@ -354,7 +354,7 @@ def load_unverified_files(filelist, sr, features=None, silence_clipping=True, al
         label = unverified_files_dict[file]
         if not already_saved:
             if silence_clipping:
-                aug_audio_file = perform_silence_clipping(file)
+                aug_audio_file = perform_silence_clipping(file, 'train_noisy')
                 data, sr = librosa.load('../datasets/train_noisy/{}'.format(aug_audio_file), sr=sr, mono=True)
 
                 if len(data) == 0:
