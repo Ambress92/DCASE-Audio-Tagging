@@ -128,14 +128,14 @@ def main():
             train_batches = generate_in_background(dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True,
                                                     features=cfg['features'], feature_width=cfg['feature_width'],
                                                     fixed_length=cfg['fixed_size'], sr=cfg['sr'],
-                                                    mixup=cfg['mixup']), num_cached=steps_per_epoch)
+                                                    mixup=cfg['mixup'], already_saved=True))
             train_noisy_batches = generate_in_background(dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True,
                                                           infinite=True, feature_width=cfg['feature_width'], features=cfg['features'],
                                                           fixed_length=cfg['fixed_size'], sr=cfg['sr'],
-                                                            mixup=cfg['mixup']), num_cached=steps_per_epoch)
+                                                            mixup=cfg['mixup'], already_saved=True))
             eval_batches = generate_in_background(dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
                                                    feature_width=cfg['feature_width'], fixed_length=cfg['fixed_size'], sr=cfg['sr'],
-                                                    mixup=cfg['mixup']), num_cached=steps_per_epoch)
+                                                    mixup=cfg['mixup'], already_saved=True))
 
 
 
