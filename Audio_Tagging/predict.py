@@ -55,11 +55,14 @@ def main():
     if options.filelist == 'validation':
         with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
             filelist = in_file.readlines()
-        batches = generate_in_background(load_batches(filelist, cfg['batchsize'], test=False, augment=False), num_cached=100)
+        batches = generate_in_background(load_batches(filelist, cfg['batchsize'], test=False, augment=False, features=cfg['features'],
+                                                      jump=cfg['jump']), num_cached=10)
     else:
         filelist = os.listdir('../features/{}/test'.format(cfg['features']))
         filelist = [file.replace('.npy', '') for file in filelist]
-        batches = generate_in_background(load_batches(filelist, cfg['batchsize'], test=True, augment=False), num_cached=100)
+        batches = generate_in_background(load_batches(filelist, cfg['batchsize'], test=True, feature_width=cfg['feature_width'],
+                                                      fixed_length=cfg['fixed_size'], features=cfg['features'],
+                                                      jump=cfg['jump']), num_cached=10)
 
     predictions = []
     truth = []

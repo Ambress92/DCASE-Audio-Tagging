@@ -66,7 +66,7 @@ def get_test_files_list():
 
 
 def load_test_features(filelist, features, path='../features/',
-                        fixed_length=3132, feature_width=9):
+                        fixed_length=3132, feature_width=9, jump=74):
     """
     Loads and returns test audio files.
     Parameters
@@ -95,11 +95,11 @@ def load_test_features(filelist, features, path='../features/',
             if data.shape[1] < fixed_length:
                 # repeat spectrogram and split into frames
                 data = repeat_spectrogram(data, fixed_length=fixed_length)
-                data = list(divide_chunks(data, int(fixed_length / feature_width)))
+                data = list(divide_chunks(data, feature_width, jump))
             else:
                 # spectrogram is too long - sample frames from spectrogram
-                frame_size = int(fixed_length / feature_width)
-                data = list(sample_from_spec(data, frame_size, feature_width))
+                data = data[:, :fixed_length]
+                data = list(divide_chunks(data, feature_width, jump))
 
         X.extend(np.asarray(data))
 
@@ -111,7 +111,7 @@ def unison_shuffled_copies(a, b):
     return a[p], b[p]
 
 def load_features(filelist, features, num_classes, feature_path='../features/',
-                    data_path='../datasets/', fixed_length=2784, feature_width=348):
+                    data_path='../datasets/', fixed_length=2784, feature_width=348, jump=74):
     """
     Loads and returns audio features and their respective labels.
     Parameters
@@ -162,11 +162,11 @@ def load_features(filelist, features, num_classes, feature_path='../features/',
             if data.shape[1] < fixed_length:
                 # repeat spectrogram and split into frames
                 data = repeat_spectrogram(data, fixed_length=fixed_length)
-                data = list(divide_chunks(data, feature_width, feature_width//2))
+                data = list(divide_chunks(data, feature_width, jump))
             else:
                 #spectrogram is too long - cut it to fixed length
                 data = data[:, :fixed_length]
-                data = list(divide_chunks(data, feature_width, feature_width//2))
+                data = list(divide_chunks(data, feature_width, jump))
 
         if len(labels) > 1:
             label = [label_mapping[l] for l in labels]
@@ -274,7 +274,7 @@ def generate_in_background(generator, num_cached=10):
 
 def load_batches(filelist, batchsize, feature_path='../features/', data_path='../datasets/',
                  shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel', test=False,
-                 augment=True, feature_width=348, fixed_length=2784):
+                 augment=True, feature_width=348, fixed_length=2784, jump=74):
     num_datapoints = len(filelist)
 
     while True:
@@ -290,7 +290,7 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
             if not test:
                 X, y = load_features(batch, features=features, num_classes=num_classes,
                                      feature_path=feature_path, data_path=data_path, fixed_length=fixed_length,
-                                     feature_width=feature_width)
+                                     feature_width=feature_width, jump=jump)
                 X = X[:,:,:,np.newaxis]
 
                 if augment:
@@ -298,7 +298,8 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
 
                 yield (X, y)
             else:
-                X = load_test_features(batch, features, path=feature_path)
+                X = load_test_features(batch, features, path=feature_path, feature_width=feature_width,
+                                       fixed_length=fixed_length, jump=jump)
                 X = X[:,:,:,np.newaxis]
                 yield X
 
