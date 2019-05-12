@@ -17,8 +17,12 @@ def repeat_spectrogram(spec, fixed_length):
 
 def divide_chunks(spec, frame_length, jump):
     # Divide whole spectrogram into windows which overlap according to the jump parameter
-    for j in range(0, spec.shape[1]-jump, jump):
-        yield spec[:, j:j + frame_length]
+    if jump != 0:
+        for j in range(0, spec.shape[1]-jump, jump):
+            yield spec[:, j:j + frame_length]
+    else:
+        for j in range(0, spec.shape[1], frame_length):
+            yield spec[:, j:j + frame_length]
 
 def sample_from_spec(spec, frame_size, feature_width):
     # sample frames of spectrogram randomly across the whole spectrogram
@@ -66,7 +70,7 @@ def get_test_files_list():
 
 
 def load_test_features(filelist, features, path='../features/',
-                        fixed_length=3132, feature_width=9, jump=74):
+                        fixed_length=3132, feature_width=348, jump=74):
     """
     Loads and returns test audio files.
     Parameters
