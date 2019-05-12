@@ -243,6 +243,35 @@ def event_oversampling(X, feature_width=348):
 
         return X_new
 
+def generate_in_background(generator, num_cached=10):
+    """
+    Runs a generator in a background thread, caching up to `num_cached` items.
+    """
+    try:
+        from Queue import Queue
+    except ImportError:
+        from queue import Queue
+    queue = Queue(maxsize=num_cached)
+    sentinel = object()  # guaranteed unique reference
+
+    # define producer (putting items into queue)
+    def producer():
+        for item in generator:
+            queue.put(item)
+        queue.put(sentinel)
+
+    # start producer (in a background thread)
+    import threading
+    thread = threading.Thread(target=producer)
+    thread.daemon = True
+    thread.start()
+
+    # run as consumer (read items from queue, in current thread)
+    item = queue.get()
+    while item is not sentinel:
+        yield item
+        item = queue.get()
+
 def load_batches(filelist, batchsize, feature_path='../features/', data_path='../datasets/',
                  shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel', test=False,
                  augment=True, feature_width=348, fixed_length=2784):

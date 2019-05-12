@@ -1,4 +1,5 @@
 import dataloader
+from dataloader import generate_in_background
 import numpy as np
 np.random.seed(101)
 import os
@@ -118,18 +119,20 @@ def main():
             epoch_lwlrap_train = []
             epoch_lwlrap_eval = []
 
-            train_batches = dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True,
-                                                    features=cfg['features'], feature_width=cfg['feature_width'],
-                                                    fixed_length=cfg['fixed_size'])
-            train_noisy_batches = dataloader.load_batches(train_files_noisy, cfg['batchisze'], shuffle=True,
-                                                          infinite=True, feature_width=cfg['feature_width'], features=cfg['features'],
-                                                          fixed_length=cfg['fixed_size'])
-            eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
-                                                   feature_width=cfg['feature_width'], fixed_length=cfg['fixed_size'])
             if (epoch % switch_train_set) == 0:
                 steps_per_epoch = len(train_files_noisy)//cfg['batchsize']
             else:
                 steps_per_epoch = len(train_files) // cfg['batchsize']
+
+
+            train_batches = generate_in_background(dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True,
+                                                    features=cfg['features'], feature_width=cfg['feature_width'],
+                                                    fixed_length=cfg['fixed_size']), num_cached=100)
+            train_noisy_batches = generate_in_background(dataloader.load_batches(train_files_noisy, cfg['batchisze'], shuffle=True,
+                                                          infinite=True, feature_width=cfg['feature_width'], features=cfg['features'],
+                                                          fixed_length=cfg['fixed_size']), num_cached=100)
+            eval_batches = generate_in_background(dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
+                                                   feature_width=cfg['feature_width'], fixed_length=cfg['fixed_size']), num_cached=100)
 
 
             for _ in tqdm.trange(
