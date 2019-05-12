@@ -162,6 +162,9 @@ def load_features(filelist, features, num_classes, feature_path='../features/',
 
             labels = noisy_files_dict[file]
 
+        if (data == None).any():
+            continue
+
         if features != 'mfcc':
             if data.shape[1] < fixed_length:
                 # repeat spectrogram and split into frames
