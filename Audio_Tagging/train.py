@@ -142,7 +142,7 @@ def main():
 
                 if (epoch % switch_train_set) == 0:
                     X_train, y_train = next(train_noisy_batches)
-                    noisy_lr = K.get_value(network.optimizer.lr)/10
+                    noisy_lr = K.get_value(network.optimizer.lr)/100
                     K.set_value(network.optimizer.lr, noisy_lr)
                 else:
                     K.set_value(network.optimizer.lr, lr)
