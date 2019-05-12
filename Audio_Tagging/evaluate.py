@@ -27,6 +27,7 @@ def opts_parser():
                         help='File to load the true labels from (.npz/.pkl format).')
     parser.add_argument('--test', help='Make late fusion on test set', action='store_true')
     parser.add_argument('-features', type=str, help='for which features to use the predictions', required=True)
+    parser.add_argument('-level', type=str, help='Whether to make late fusion on file or on frame level', default='frame')
     config.prepare_argument_parser(parser)
     return parser
 
@@ -230,7 +231,7 @@ def load_preds(file, features):
     return np.load('predictions/{}/{}'.format(features, file)).item()
 
 
-def make_average_late_fusion(infiles, features):
+def make_average_late_fusion(infiles, features, frame=True):
     initial_preds = load_preds(infiles[0], features)
     initial_preds = {k: initial_preds[k]/len(infiles) for k in initial_preds.keys()}
     for infile in infiles[1:]:
@@ -239,8 +240,9 @@ def make_average_late_fusion(infiles, features):
             initial_preds[key] += morepreds[key] / len(infiles)
         del morepreds
 
-    for key in initial_preds.keys():
-        initial_preds[key] = np.average(initial_preds[key], axis=0)
+    if frame:
+        for key in initial_preds.keys():
+            initial_preds[key] = np.average(initial_preds[key], axis=0)
 
     return initial_preds
 
@@ -278,7 +280,7 @@ def main():
     exp_name = ''
     if len(infiles) > 1:
         # predictions need to be on frame wise level for late fusion
-        preds = make_average_late_fusion(infiles, options.features)
+        preds = make_average_late_fusion(infiles, options.features, True if options.level == 'frame' else False)
 
         if options.test:
             already_listed = []
