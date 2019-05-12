@@ -55,7 +55,7 @@ def main():
     if options.filelist == 'validation':
         with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
             filelist = in_file.readlines()
-        batches = load_batches(filelist, cfg['batchsize'], test=False, augment=False, already_saved=True)
+        batches = load_batches(filelist, cfg['batchsize'], test=False, augment=False)
     else:
         filelist = os.listdir('../features/{}/test'.format(cfg['features']))
         filelist = [file.replace('.npy', '') for file in filelist]

@@ -3,8 +3,22 @@ import tqdm
 import numpy as np
 np.random.seed(101)
 import os
-import librosa
-import feature_extractor
+
+def repeat_spectrogram(spec, fixed_length):
+    if spec.shape[1] < fixed_length:
+        while spec.shape[1] < fixed_length:
+            spec = np.concatenate((spec, spec), axis=-1)
+
+    if spec.shape[1] > fixed_length:
+        spec = spec[:, :fixed_length]
+
+    return spec
+
+
+def divide_chunks(spec, frame_length, jump):
+    # Divide whole spectrogram into windows which overlap according to the jump parameter
+    for j in range(0, spec.shape[1]-jump, jump):
+        yield spec[:, j:j + frame_length]
 
 def sample_from_spec(spec, frame_size, feature_width):
     # sample frames of spectrogram randomly across the whole spectrogram
@@ -41,7 +55,6 @@ def get_total_file_dict(path='../datasets/'):
 def get_test_files_list():
     """
     Determines the ground-truth label of test audio samples.
-
     Returns
     -------
     test_files : dictionary
@@ -52,10 +65,10 @@ def get_test_files_list():
     return test_files
 
 
-def load_test_features(audio_clips, filelist, features, fixed_length=2784, feature_width=348, sr=32000, mixup=False):
+def load_test_features(filelist, features, path='../features/',
+                        fixed_length=3132, feature_width=9):
     """
     Loads and returns test audio files.
-
     Parameters
     ----------
     filelist : List
@@ -69,32 +82,25 @@ def load_test_features(audio_clips, filelist, features, fixed_length=2784, featu
         Defaults to `3132`.
     feature_width : int
         Number of frames within a feature. Defaults to `9`.
-
     Returns
     -------
     test_files : List of Tuples
         List containing (data, label) tupels for all test audio clips.
     """
     X = []
+    for file in filelist:
+        data = np.load('{}/test/{}.npy'.format(path+features, file.rstrip().replace('.wav', '')))
 
-    if features == 'mel':
-        spectrograms = feature_extractor.get_mel_specs(audio_clips, filelist, sr=sr, spec_weighting=False, plot=False, dump=False,
-                                                       mixup=mixup, fixed_length=fixed_length, test=True)
-    elif features == 'mel_weighted':
-        spectrograms = feature_extractor.get_mel_specs(audio_clips, filelist, sr=sr, spec_weighting=True,
-                                                               plot=False, dump=False,
-                                                               mixup=mixup, fixed_length=fixed_length, test=True)
-    elif features == 'cqt':
-        spectrograms = feature_extractor.get_cqt_specs(audio_clips, filelist, sr=sr, spec_weighting=False,
-                                                               plot=False, dump=False,
-                                                               mixup=mixup, fixed_length=fixed_length, test=True)
-    elif features == 'cqt_weighted':
-        spectrograms = feature_extractor.get_cqt_specs(audio_clips, filelist, sr=sr, spec_weighting=True,
-                                                               plot=False, dump=False,
-                                                               mixup=mixup, fixed_length=fixed_length, test=True)
+        if features != 'mfcc':
+            if data.shape[1] < fixed_length:
+                # repeat spectrogram and split into frames
+                data = repeat_spectrogram(data, fixed_length=fixed_length)
+                data = list(divide_chunks(data, int(fixed_length / feature_width)))
+            else:
+                # spectrogram is too long - sample frames from spectrogram
+                frame_size = int(fixed_length / feature_width)
+                data = list(sample_from_spec(data, frame_size, feature_width))
 
-    for data in spectrograms:
-        data = list(divide_chunks(data, int(fixed_length / feature_width)))
         X.extend(np.asarray(data))
 
     return np.asarray(X)
@@ -104,18 +110,10 @@ def unison_shuffled_copies(a, b):
     p = np.random.permutation(len(a))
     return a[p], b[p]
 
-
-def divide_chunks(spec, frame_length, jump):
-    # Divide whole spectrogram into windows which overlap according to the jump parameter
-    for j in range(0, spec.shape[1]-jump, jump):
-        yield spec[:, j:j + frame_length]
-
-
-def load_features(audio_clips, filelist, features, num_classes,
-                    data_path='../datasets/', fixed_length=2784, feature_width=348, sr=32000, mixup=True):
+def load_features(filelist, features, num_classes, feature_path='../features/',
+                    data_path='../datasets/', fixed_length=2784, feature_width=348):
     """
     Loads and returns audio features and their respective labels.
-
     Parameters
     ----------
     filelist : List
@@ -133,7 +131,6 @@ def load_features(audio_clips, filelist, features, num_classes,
         Defaults to `3132`.
     feature_width : int
         Number of frames within a feature. Defaults to `9`.
-
     Returns
     -------
     X : Array
@@ -142,42 +139,88 @@ def load_features(audio_clips, filelist, features, num_classes,
         Array containing labels for all files in filelist.
     """
     # load verified audio clips
+    curated_files_dict = get_verified_files_dict(data_path)
+    noisy_files_dict = get_unverified_files_dict(data_path)
     label_mapping, inv_label_mapping = get_label_mapping(data_path)
     X = []
     y = []
 
-    labels = audio_clips[1]
-    labels_encoded = []
-    for label in labels:
-        l = [label_mapping[l] for l in label]
-        one_hot = one_hot_encode(np.asarray(l), num_classes)
-        labels_encoded.append(one_hot)
-    labels_encoded = np.asarray(labels_encoded)
-    audio_clips = (audio_clips[0], labels_encoded)
+    for file in filelist:
+        file = file.rstrip()+'.wav'
+        if file in curated_files_dict.keys():
+            data = np.load(
+                '{}/train_curated/{}.npy'.format(feature_path+features, file.rstrip().replace('.wav', '')))
 
-    if features == 'mel':
-        spectrograms, labels = feature_extractor.get_mel_specs(audio_clips, filelist, sr=sr, spec_weighting=False, plot=False, dump=False,
-                                                       mixup=mixup, fixed_length=fixed_length)
-    elif features == 'mel_weighted':
-        spectrograms, labels = feature_extractor.get_mel_specs(audio_clips, filelist, sr=sr, spec_weighting=True,
-                                                               plot=False, dump=False,
-                                                               mixup=mixup, fixed_length=fixed_length)
-    elif features == 'cqt':
-        spectrograms, labels = feature_extractor.get_cqt_specs(audio_clips, filelist, sr=sr, spec_weighting=False,
-                                                               plot=False, dump=False,
-                                                               mixup=mixup, fixed_length=fixed_length)
-    elif features == 'cqt_weighted':
-        spectrograms, labels = feature_extractor.get_cqt_specs(audio_clips, filelist, sr=sr, spec_weighting=True,
-                                                               plot=False, dump=False,
-                                                               mixup=mixup, fixed_length=fixed_length)
+            labels = curated_files_dict[file]
+        else:
+            data = np.load(
+                '{}/train_noisy/{}.npy'.format(feature_path+features, file.rstrip().replace('.wav', '')))
 
-    for data, label in zip(spectrograms, labels):
-        data = list(divide_chunks(data, feature_width, feature_width//2))
+            labels = noisy_files_dict[file]
+
+        if features != 'mfcc':
+            if data.shape[1] < fixed_length:
+                # repeat spectrogram and split into frames
+                data = repeat_spectrogram(data, fixed_length=fixed_length)
+                data = list(divide_chunks(data, feature_width, feature_width//2))
+            else:
+                #spectrogram is too long - cut it to fixed length
+                data = data[:, :fixed_length]
+                data = list(divide_chunks(data, feature_width, feature_width//2))
+
+        if len(labels) > 1:
+            label = [label_mapping[l] for l in labels]
+        else:
+            label = label_mapping[labels[0]]
+
+        label = one_hot_encode(np.asarray(label), num_classes)
         for i in range(len(data)):
             y.append(label)
         X.extend(np.asarray(data))
 
     return np.asarray(X), np.asarray(y)
+
+def mixup_augmentation(X, y,  alpha=0.3):
+
+    batch_size, h, w, c = X.shape
+    l = np.random.beta(alpha, alpha, batch_size)
+    X_l = l.reshape(batch_size, 1, 1, 1)
+    y_l = l.reshape(batch_size, 1)
+
+    # mix observations
+    X1, X2 = X[:], X[::-1]
+    X = X1 * X_l + X2 * (1.0 - X_l)
+    one_hot = y
+
+    # mix labels
+    y1 = one_hot[:]
+    y2 = one_hot[::-1]
+    y = y1 * y_l +  y2 * (1.0 - y_l)
+
+    return X.astype(np.float32), y.astype(np.float32)
+
+def concat_mixup_augmentation(X, y, alpha=0.3, p=0.5):
+
+    batch_size, h, w, c = X.shape
+    if np.random.random() < p:
+        l = np.random.beta(alpha, alpha, batch_size)
+        y_l = l.reshape(batch_size, 1)
+
+        # mix observations
+        X1 = X[:]
+        X2 = X[::-1]
+        w1 = int(w * (1.0-alpha))
+        X = np.concatenate((X1[:, :, :w1, :], X2[:,:,w1::,:]), axis=2)
+
+        # mix labels
+        one_hot = y
+        y1 = one_hot[:]
+        y2 = one_hot[::-1]
+        y = y1 * y_l + y2 * (1.0 - y_l)
+
+        return X.astype(np.float32), y.astype(np.float32)
+    else:
+        return X, y
 
 def event_oversampling(X, feature_width=348):
     batch_size, h, w, c = X.shape
@@ -200,40 +243,10 @@ def event_oversampling(X, feature_width=348):
 
         return X_new
 
-def generate_in_background(generator, num_cached=10):
-    """
-    Runs a generator in a background thread, caching up to `num_cached` items.
-    """
-    try:
-        from Queue import Queue
-    except ImportError:
-        from queue import Queue
-    queue = Queue(maxsize=num_cached)
-    sentinel = object()  # guaranteed unique reference
-
-    # define producer (putting items into queue)
-    def producer():
-        for item in generator:
-            queue.put(item)
-        queue.put(sentinel)
-
-    # start producer (in a background thread)
-    import threading
-    thread = threading.Thread(target=producer)
-    thread.daemon = True
-    thread.start()
-
-    # run as consumer (read items from queue, in current thread)
-    item = queue.get()
-    while item is not sentinel:
-        yield item
-        item = queue.get()
-
 def load_batches(filelist, batchsize, feature_path='../features/', data_path='../datasets/',
                  shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel', test=False,
-                 augment=True, feature_width=348, fixed_length=2784, sr=32000, mixup=True, dump=False, already_saved=False):
+                 augment=True, feature_width=348, fixed_length=2784):
     num_datapoints = len(filelist)
-    curated_files = get_verified_files_dict(data_path)
 
     while True:
 
@@ -246,19 +259,17 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
             batch = filelist[start_idx: start_idx+batchsize]
 
             if not test:
-                if batch[0].rstrip()+'.wav' in curated_files.keys():
-                    audio_clips = load_verified_files(batch, sr=sr, silence_clipping=True)
-                else:
-                    audio_clips = load_unverified_files(batch, sr=sr, silence_clipping=True)
-
-                X, y = load_features(audio_clips, batch, features=features, num_classes=num_classes,
-                                     data_path=data_path, fixed_length=fixed_length,
-                                     feature_width=feature_width, sr=sr, mixup=mixup, dump=dump, already_saved=already_saved)
+                X, y = load_features(batch, features=features, num_classes=num_classes,
+                                     feature_path=feature_path, data_path=data_path, fixed_length=fixed_length,
+                                     feature_width=feature_width)
                 X = X[:,:,:,np.newaxis]
+
+                if augment:
+                    X, y = mixup_augmentation(X, y)
 
                 yield (X, y)
             else:
-                X = load_test_features(batch, features)
+                X = load_test_features(batch, features, path=feature_path)
                 X = X[:,:,:,np.newaxis]
                 yield X
 
@@ -267,9 +278,8 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
 
 def load_batches_verification(filelist, feature_path='../features/', data_path='../datasets/',
                  shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel', k=24, feature_width=348,
-                    fixed_length=2784, sr=32000, mixup=False, already_saved=False):
+                    fixed_length=2784):
     num_datapoints = len(filelist)
-    curated_files = get_verified_files_dict(data_path)
 
     while True:
 
@@ -283,15 +293,9 @@ def load_batches_verification(filelist, feature_path='../features/', data_path='
             y_train = []
             for file in filelist[start_idx:start_idx+k]:
 
-                if file in curated_files.keys():
-                    audio_clips = load_verified_files([file], sr=sr, silence_clipping=True)
-                else:
-                    audio_clips = load_unverified_files([file], sr=sr, silence_clipping=True)
-
-                X_temp, y_temp = load_features([audio_clips], filelist, features=features, num_classes=num_classes,
-                                     data_path=data_path, fixed_length=fixed_length,
-                                     feature_width=feature_width, sr=sr, mixup=mixup, already_saved=already_saved)
-
+                X_temp, y_temp = load_features([file], features=features, num_classes=num_classes,
+                                     feature_path=feature_path, data_path=data_path, fixed_length=fixed_length,
+                                     feature_width=feature_width)
                 rand_ind = np.random.choice(X_temp.shape[0])
                 X_train.append(X_temp[rand_ind])
                 y_train.append(y_temp[rand_ind])
@@ -301,98 +305,37 @@ def load_batches_verification(filelist, feature_path='../features/', data_path='
         if not infinite:
             break
 
-def perform_silence_clipping(file, dirname):
-    # perform silence clipping
-    aug_cmd = "norm -0.1 silence 1 0.025 0.15% norm -0.1 reverse silence 1 0.025 0.15% reverse"
-    aug_audio_file = file.replace('.wav', '_clipped.wav')
-    command = "sox %s %s %s" % (
-        '../datasets/{}/{}'.format(dirname, file), '../datasets/{}/{}'.format(dirname, aug_audio_file),
-        aug_cmd)
-    os.system(command)
 
-    assert os.path.exists(
-        '../datasets/{}/{}'.format(dirname, aug_audio_file)), "SOX Problem ... clipped wav does not exist!"
-    return aug_audio_file
-
-def load_verified_files(filelist, sr, features=None, silence_clipping=True, already_saved=False):
+def load_verified_files(features=None):
     verified_files_dict = get_verified_files_dict()
 
     # load verified audio clips
-    datapoints = []
-    labels = []
-    for file in filelist:
-        file = file.rstrip()+'.wav'
-        label = verified_files_dict[file]
-        if not already_saved:
-            if silence_clipping:
-
-                aug_audio_file = perform_silence_clipping(file, 'train_curated')
-                data, sr = librosa.load('../datasets/train_curated/{}'.format(aug_audio_file), sr=sr, mono=True)
-
-                if len(data) == 0:
-                    data, sr = librosa.load('../datasets/train_curated/{}'.format(file), sr=sr, mono=True)
-            else:
-                data, sr = librosa.load('../datasets/train_curated/{}'.format(file), sr=sr)
-
-            os.remove('../datasets/train_curated/{}'.format(aug_audio_file))
+    verified_files = []
+    for file, label in tqdm.tqdm(zip(verified_files_dict.keys(), verified_files_dict.values()), 'Loading verified clips'):
+        if not features:
+            _, data = wavfile.read('../datasets/train_curated/{}'.format(file))
         else:
-            data = np.load('../features/{}/{}.npy'.format(features, file.replace('.wav', '')))
+            data = np.load('../features/{}/train_curated/{}.npy'.format(features, file.replace('wav', features)))
 
-        datapoints.append(data)
-        labels.append(label)
+        verified_files.append((data, label))
 
-    return (datapoints, labels)
+    return verified_files
 
-def load_unverified_files(filelist, sr, features=None, silence_clipping=True, already_saved=False):
+def load_unverified_files(features=None):
     unverified_files_dict = get_unverified_files_dict()
 
-    # load unverified audio clips
-    datapoints = []
-    labels = []
-    for file in filelist:
-        file = file.rstrip() + '.wav'
-        label = unverified_files_dict[file]
-        if not already_saved:
-            if silence_clipping:
-                aug_audio_file = perform_silence_clipping(file, 'train_noisy')
-                data, sr = librosa.load('../datasets/train_noisy/{}'.format(aug_audio_file), sr=sr, mono=True)
-
-                if len(data) == 0:
-                    data, sr = librosa.load('../datasets/train_noisy/{}'.format(file), sr=sr, mono=True)
-
-                os.remove('../datasets/train_noisy/{}'.format(aug_audio_file))
-            else:
-                data, sr = librosa.load('../datasets/train_noisy/{}'.format(file), sr=sr)
+    # load verified audio clips
+    unverified_files = []
+    for file, label in tqdm.tqdm(zip(unverified_files_dict.keys(), unverified_files_dict.values()),
+                                 'Loading verified clips'):
+        if not features:
+            _, data = wavfile.read('../datasets/train_curated/{}'.format(file))
         else:
-            data = np.load('../features/{}/{}.npy'.format(features, file.replace('.wav', '')))
+            data = np.load('../features/{}/train_curated/{}.npy'.format(features, file.replace('wav', features)))
 
-        datapoints.append(data)
-        labels.append(label)
+        unverified_files.append((data, label))
 
-    return (datapoints, labels)
-
-def load_test_files(filelist, sr, features=None, silence_clipping=True, already_saved=False):
-    # load unverified audio clips
-    datapoints = []
-    for file in filelist:
-        file = file.rstrip() + '.wav'
-        if not already_saved:
-            if silence_clipping:
-                aug_audio_file = perform_silence_clipping(file)
-                data, sr = librosa.load('../datasets/test/{}'.format(aug_audio_file), sr=sr, mono=True)
-
-                if len(data) == 0:
-                    data, sr = librosa.load('../datasets/test/{}'.format(file), sr=sr, mono=True)
-
-                os.remove('../datasets/test/{}'.format(aug_audio_file))
-            else:
-                data, sr = librosa.load('../datasets/test/{}'.format(file), sr=sr)
-        else:
-            data = np.load('../features/{}/{}.npy'.format(features, file.replace('.wav', '')))
-
-        datapoints.append(data)
-
-    return datapoints
+    return unverified_files
 
 def get_label_mapping(path='../datasets/'):
     with open(path+'train_curated.csv', 'r') as in_file:
@@ -417,14 +360,12 @@ def one_hot_encode(labels, num_classes):
     """
     Derives the one-hot-encoding representation of defined
     label for given number of classes.
-
     Parameters
     ----------
     labels : Array
         Array of indices to be one-hot-encoded.
     num_classes : int
         Total number of different classes.
-
     Returns
     -------
     encoding : Array
