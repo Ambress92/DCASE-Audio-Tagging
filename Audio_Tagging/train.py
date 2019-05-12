@@ -132,7 +132,8 @@ def main():
                                                           infinite=True, feature_width=cfg['feature_width'], features=cfg['features'],
                                                           fixed_length=cfg['fixed_size']), num_cached=100)
             eval_batches = generate_in_background(dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
-                                                   feature_width=cfg['feature_width'], fixed_length=cfg['fixed_size']), num_cached=100)
+                                                   feature_width=cfg['feature_width'], fixed_length=cfg['fixed_size'],
+                                                                          augment=False), num_cached=100)
 
 
             for _ in tqdm.trange(

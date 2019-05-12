@@ -9,7 +9,7 @@ np.random.seed(101)
 import tqdm
 import config
 from keras.models import model_from_yaml
-from dataloader import load_batches, load_features, load_test_features
+from dataloader import load_batches, load_features, load_test_features, generate_in_background
 import re
 from keras.models import load_model
 
@@ -55,11 +55,11 @@ def main():
     if options.filelist == 'validation':
         with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
             filelist = in_file.readlines()
-        batches = load_batches(filelist, cfg['batchsize'], test=False, augment=False)
+        batches = generate_in_background(load_batches(filelist, cfg['batchsize'], test=False, augment=False), num_cached=100)
     else:
         filelist = os.listdir('../features/{}/test'.format(cfg['features']))
         filelist = [file.replace('.npy', '') for file in filelist]
-        batches = load_batches(filelist, cfg['batchsize'], test=True)
+        batches = generate_in_background(load_batches(filelist, cfg['batchsize'], test=True, augment=False), num_cached=100)
 
     predictions = []
     truth = []
