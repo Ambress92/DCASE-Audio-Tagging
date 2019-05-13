@@ -128,12 +128,12 @@ def main():
             train_batches = generate_in_background(dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True,
                                                     features=cfg['features'], feature_width=cfg['feature_width'],
                                                     fixed_length=cfg['fixed_size'], jump=cfg['jump']), num_cached=100)
-            train_noisy_batches = generate_in_background(dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True,
+            train_noisy_batches = dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True,
                                                           infinite=True, feature_width=cfg['feature_width'], features=cfg['features'],
-                                                          fixed_length=cfg['fixed_size'], jump=cfg['jump']), num_cached=100)
-            eval_batches = generate_in_background(dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
+                                                          fixed_length=cfg['fixed_size'], jump=cfg['jump'])
+            eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
                                                    feature_width=cfg['feature_width'], fixed_length=cfg['fixed_size'],
-                                                                          augment=False, jump=cfg['jump']), num_cached=100)
+                                                                          augment=False, jump=cfg['jump'])
 
 
             for _ in tqdm.trange(

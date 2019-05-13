@@ -115,7 +115,7 @@ def unison_shuffled_copies(a, b):
     return a[p], b[p]
 
 def load_features(filelist, features, num_classes, feature_path='../features/',
-                    data_path='../datasets/', fixed_length=2784, feature_width=348, jump=74):
+                    data_path='../datasets/', fixed_length=2784, feature_width=348, jump=174):
     """
     Loads and returns audio features and their respective labels.
     Parameters
@@ -162,7 +162,7 @@ def load_features(filelist, features, num_classes, feature_path='../features/',
 
             labels = noisy_files_dict[file]
 
-        if (data == None).any():
+        if (data == None).any() or np.isnan(data).any():
             continue
 
         if features != 'mfcc':
@@ -281,7 +281,7 @@ def generate_in_background(generator, num_cached=10):
 
 def load_batches(filelist, batchsize, feature_path='../features/', data_path='../datasets/',
                  shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel', test=False,
-                 augment=True, feature_width=348, fixed_length=2784, jump=74):
+                 augment=True, feature_width=348, fixed_length=2784, jump=174):
     num_datapoints = len(filelist)
 
     while True:
