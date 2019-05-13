@@ -87,7 +87,8 @@ def main():
         print("Compiling model ...")
         optimizer = keras.optimizers.Adam(lr=cfg['lr'])
         if 'IIC' in modelfile:
-            network.compile(optimizer=optimizer, loss={'clf_output':cfg['loss']}, metrics=['acc'])
+            network.compile(optimizer=optimizer, loss={'clf_output':cfg['loss'],
+                                                       'clf_output_augmented':cfg['loss']}, metrics=['acc'])
         else:
             network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=['acc'])
 
