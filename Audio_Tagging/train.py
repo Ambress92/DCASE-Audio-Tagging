@@ -131,7 +131,7 @@ def main():
 
             if (epoch % switch_train_set) == 0:
                 steps_per_epoch = len(train_files_noisy)//cfg['batchsize']
-                noisy_lr = K.get_value(network.optimizer.lr).copy() / 100
+                noisy_lr = K.get_value(network.optimizer.lr).copy() / 10
                 K.set_value(network.optimizer.lr, noisy_lr)
             else:
                 steps_per_epoch = len(train_files) // cfg['batchsize']
