@@ -109,6 +109,15 @@ def main():
         switch_train_set = cfg['switch_train_set']
         lr = cfg['lr']
 
+        train_batches = generate_in_background(
+            dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True,
+                                    features=cfg['features'], feature_width=cfg['feature_width'],
+                                    fixed_length=cfg['fixed_size'], jump=cfg['jump']), num_cached=100)
+        train_noisy_batches = dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True,
+                                                      infinite=True, feature_width=cfg['feature_width'],
+                                                      features=cfg['features'],
+                                                      fixed_length=cfg['fixed_size'], jump=cfg['jump'])
+
         # run training loop
         print("Training:")
         for epoch in range(1, cfg['epochs']+1):
@@ -122,16 +131,12 @@ def main():
 
             if (epoch % switch_train_set) == 0:
                 steps_per_epoch = len(train_files_noisy)//cfg['batchsize']
+                noisy_lr = K.get_value(network.optimizer.lr).copy() / 100
+                K.set_value(network.optimizer.lr, noisy_lr)
             else:
                 steps_per_epoch = len(train_files) // cfg['batchsize']
+                K.set_value(network.optimizer.lr, lr)
 
-
-            train_batches = generate_in_background(dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True,
-                                                    features=cfg['features'], feature_width=cfg['feature_width'],
-                                                    fixed_length=cfg['fixed_size'], jump=cfg['jump']), num_cached=100)
-            train_noisy_batches = dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True,
-                                                          infinite=True, feature_width=cfg['feature_width'], features=cfg['features'],
-                                                          fixed_length=cfg['fixed_size'], jump=cfg['jump'])
             eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
                                                    feature_width=cfg['feature_width'], fixed_length=cfg['fixed_size'],
                                                                           augment=False, jump=cfg['jump'])
@@ -143,10 +148,8 @@ def main():
 
                 if (epoch % switch_train_set) == 0:
                     X_train, y_train = next(train_noisy_batches)
-                    noisy_lr = K.get_value(network.optimizer.lr)/100
-                    K.set_value(network.optimizer.lr, noisy_lr)
+
                 else:
-                    K.set_value(network.optimizer.lr, lr)
                     X_train, y_train = next(train_batches)
 
                 metrics = network.train_on_batch(x=X_train, y=y_train)
@@ -204,7 +207,7 @@ def main():
 
                 if cfg['linear_decay']:
                     if epoch >= cfg['start_linear_decay']:
-                        lr = keras.backend.get_value(network.optimizer.lr)
+                        lr = keras.backend.get_value(network.optimizer.lr).copy()
                         lr = lr - lr_decay
                         keras.backend.set_value(network.optimizer.lr, lr)
                         print("Decreasing learning rate by {}...".format(lr_decay))
