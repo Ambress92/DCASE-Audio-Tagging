@@ -128,13 +128,13 @@ def main():
             batch_val_acc = []
             epoch_lwlrap_train = []
             epoch_lwlrap_eval = []
-
+            steps_per_epoch = len(train_files) // cfg['batchsize']
+                
+            
             if (epoch % switch_train_set) == 0:
-                steps_per_epoch = len(train_files_noisy)//cfg['batchsize']
                 noisy_lr = K.get_value(network.optimizer.lr).copy() / 2
                 K.set_value(network.optimizer.lr, noisy_lr)
             else:
-                steps_per_epoch = len(train_files) // cfg['batchsize']
                 K.set_value(network.optimizer.lr, lr)
 
             eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
