@@ -85,12 +85,13 @@ def main():
 
         # Add optimizer and compile model
         print("Compiling model ...")
-        optimizer = keras.optimizers.Adam(lr=cfg['lr'])
+        curated_optimizer = keras.optimizers.Adam(lr=cfg['lr'])
+        noisy_optimizer = keras.optimizers.Adam(lr=cfg['lr']/10)
         if 'IIC' in modelfile:
-            network.compile(optimizer=optimizer, loss={'clf_output':cfg['loss'],
+            network.compile(optimizer=curated_optimizer, loss={'clf_output':cfg['loss'],
                                                        'clf_output_augmented':cfg['loss']}, metrics=['acc'])
         else:
-            network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=['acc'])
+            network.compile(optimizer=curated_optimizer, loss=cfg["loss"], metrics=['acc'])
 
         print("Preserving architecture and configuration ..")
         if not os.path.exists('models/{}'.format(cfg['features'])):
@@ -105,15 +106,18 @@ def main():
         epochs_without_decrase = 0
         lwlraps_eval = []
         lwlraps_train = []
-        lr_decay = K.get_value(network.optimizer.lr)/(cfg['epochs']-cfg['start_linear_decay']+1)
-        switch_train_set = cfg['switch_train_set']
         lr = cfg['lr']
+        min_curated_lr = 1e-5
+        lr_decay = (lr-min_curated_lr)/(cfg['epochs']-cfg['start_linear_decay']+1)
+        switch_train_set = cfg['switch_train_set']
+        optimizer_changed=False
+
 
         train_batches = generate_in_background(
             dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True,
                                     features=cfg['features'], feature_width=cfg['feature_width'],
                                     fixed_length=cfg['fixed_size'], jump=cfg['jump']), num_cached=100)
-        train_noisy_batches = dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True, augment=False,
+        train_noisy_batches = dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True,
                                                       infinite=True, feature_width=cfg['feature_width'],
                                                       features=cfg['features'],
                                                       fixed_length=cfg['fixed_size'], jump=cfg['jump'])
@@ -131,11 +135,14 @@ def main():
             steps_per_epoch = len(train_files) // cfg['batchsize']
                 
             
-            if (epoch % switch_train_set) == 0:
-                noisy_lr = K.get_value(network.optimizer.lr).copy() / 10
-                K.set_value(network.optimizer.lr, noisy_lr)
-            else:
+            if optimizer_changed:
+                network.compile(optimizer=curated_optimizer, loss=cfg["loss"], metrics=['acc'])
                 K.set_value(network.optimizer.lr, lr)
+                optimizer_changed=False
+            elif (epoch % switch_train_set) == 0:
+                noisy_lr = lr / 10
+                network.compile(optimizer=noisy_optimizer, loss=cfg["loss"], metrics=['acc'])
+                K.set_value(network.optimizer.lr, noisy_lr)
 
             eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
                                                    feature_width=cfg['feature_width'], fixed_length=cfg['fixed_size'],
@@ -207,7 +214,6 @@ def main():
 
                 if cfg['linear_decay']:
                     if epoch >= cfg['start_linear_decay']:
-                        lr = keras.backend.get_value(network.optimizer.lr).copy()
                         lr = lr - lr_decay
                         keras.backend.set_value(network.optimizer.lr, lr)
                         print("Decreasing learning rate by {}...".format(lr_decay))
@@ -217,6 +223,9 @@ def main():
                 network.save("models/{}/{}_fold{}.hd5".format(cfg['features'], modelfile.replace('.py', ''), fold))
 
             lwlraps_eval.append(np.mean(epoch_lwlrap_eval))
+
+            if (epoch % switch_train_set) == 0:
+                optimizer_changed = True
 
             if not os.path.exists('plots/{}'.format(cfg['features'])):
                 os.makedirs('plots/{}'.format(cfg['features']))
