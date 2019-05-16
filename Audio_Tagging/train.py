@@ -85,13 +85,12 @@ def main():
 
         # Add optimizer and compile model
         print("Compiling model ...")
-        curated_optimizer = keras.optimizers.Adam(lr=cfg['lr'])
-        noisy_optimizer = keras.optimizers.Adam(lr=cfg['lr']/10)
+        optimizer = keras.optimizers.Adam(lr=cfg['lr'])
         if 'IIC' in modelfile:
-            network.compile(optimizer=curated_optimizer, loss={'clf_output':cfg['loss'],
+            network.compile(optimizer=optimizer, loss={'clf_output':cfg['loss'],
                                                        'clf_output_augmented':cfg['loss']}, metrics=['acc'])
         else:
-            network.compile(optimizer=curated_optimizer, loss=cfg["loss"], metrics=['acc'])
+            network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=['acc'])
 
         print("Preserving architecture and configuration ..")
         if not os.path.exists('models/{}'.format(cfg['features'])):
@@ -136,12 +135,12 @@ def main():
                 
             
             if optimizer_changed:
-                network.compile(optimizer=curated_optimizer, loss=cfg["loss"], metrics=['acc'])
+                # network.compile(optimizer=curated_optimizer, loss=cfg["loss"], metrics=['acc'])
                 K.set_value(network.optimizer.lr, lr)
                 optimizer_changed=False
             elif (epoch % switch_train_set) == 0:
                 noisy_lr = lr / 10
-                network.compile(optimizer=noisy_optimizer, loss=cfg["loss"], metrics=['acc'])
+                # network.compile(optimizer=noisy_optimizer, loss=cfg["loss"], metrics=['acc'])
                 K.set_value(network.optimizer.lr, noisy_lr)
 
             eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
@@ -213,7 +212,7 @@ def main():
                         epochs_without_decrase = 0
 
                 if cfg['linear_decay']:
-                    if epoch >= cfg['start_linear_decay']:
+                    if epoch >= cfg['start_linear_decay'] and lr >= min_curated_lr:
                         lr = lr - lr_decay
                         keras.backend.set_value(network.optimizer.lr, lr)
                         print("Decreasing learning rate by {}...".format(lr_decay))
