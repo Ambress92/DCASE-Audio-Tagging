@@ -132,7 +132,7 @@ def main():
                 
             
             if (epoch % switch_train_set) == 0:
-                noisy_lr = K.get_value(network.optimizer.lr).copy() / 2
+                noisy_lr = K.get_value(network.optimizer.lr).copy() / 10
                 K.set_value(network.optimizer.lr, noisy_lr)
             else:
                 K.set_value(network.optimizer.lr, lr)
