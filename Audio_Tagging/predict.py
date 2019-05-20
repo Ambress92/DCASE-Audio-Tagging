@@ -66,12 +66,12 @@ def main():
 
     predictions = []
     truth = []
-    n_frames = cfg['fixed_size'] // cfg['feature_width']
 
     if options.filelist == 'test':
 
         for X in tqdm.tqdm(batches):
             preds = network.predict(x=X, batch_size=cfg['batchsize'], verbose=0)
+            n_frames = len(X) // cfg['batchsize']
             for i in range(0, len(X), n_frames):
                 if options.level == 'file':
                     predictions.append(np.average(preds[i:i+n_frames], axis=0))
@@ -81,6 +81,7 @@ def main():
     else:
         for X, y  in tqdm.tqdm(batches, desc='Batch'):
             preds = network.predict(x=X, batch_size=cfg['batchsize'], verbose=0)
+            n_frames = len(X) // cfg['batchsize']
             for i in range(0, len(X), n_frames):
                 if options.level == 'file':
                     predictions.append(np.average(preds[i:i+n_frames], axis=0))

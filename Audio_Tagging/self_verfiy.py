@@ -55,11 +55,11 @@ def main():
             network.load_weights(modelfile.replace('.yaml', '.hd5'))
             optimizer = Adam(lr = cfg['finetune_lr'])
             network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=['acc'])
-            modelfile.replace('.yaml', '')
+            modelfile = modelfile.replace('.yaml', '')
         else:
             network = load_model("models/{}/{}_fold{}.hd5".format(cfg['features'], modelfile.replace('.py', ''), fold))
             K.set_value(network.optimizer.lr, cfg['finetune_lr'])
-            modelfile.replace('.py')
+            modelfile = modelfile.replace('.py', '')
 
         verify_files_noisy = []
         validation_files = []
@@ -74,6 +74,7 @@ def main():
         verified_frame_labels = []
         label_count = {k:0 for k in label_mapping.keys()}
         labels_per_epoch = cfg['labels_per_epoch']
+        label_threshold = 1000
         lr_decay = cfg['finetune_lr']/(cfg['self_verify_epochs']-cfg['start_linear_decay_finetune']+1)
 
         accs = []
@@ -85,11 +86,12 @@ def main():
             epoch_train_acc = []
             epoch_train_loss = []
             epoch_lwlrap_train = []
+            label_counter = 0
 
-            verify_noisy_batches = dataloader.load_batches_verification(verify_files_noisy, k=cfg['k'],
+            verify_noisy_batches = dataloader.generate_in_background(dataloader.load_batches_verification(verify_files_noisy, k=cfg['k'],
                                                                         shuffle=True, infinite=True,
                                                                         features=cfg['features'], feature_width=cfg['feature_width'],
-                                                                        fixed_length=cfg['fixed_size'])
+                                                                        fixed_length=cfg['fixed_size']))
             print('Predict on noisy data...')
             for X, y in tqdm.tqdm(verify_noisy_batches, desc='Batch'):
                 predictions = network.predict(x=X, batch_size=cfg['verify_batchsize'], verbose=0)
@@ -107,25 +109,29 @@ def main():
                                 verified_frames.append(X[i])
                                 verified_frame_labels.append(y[i])
                                 label_count[l] += 1
+                                label_counter += 1
 
                 if current_lwlrap > 0.9:
                     print('lwlrap is greater than 90%')
-                    if len(np.nonzero(y > 0)[0]) > 1:
-                        labels = inv_label_mapping[np.nonzero(y > 0)[0]]
-                        labels = [inv_label_mapping[l] for l in labels]
-                        for l in labels:
-                            if label_count[l] < labels_per_epoch:
-                                verified_frames.extend(X)
-                                verified_frame_labels.extend(y)
-                                label_count[l] += 1
-                    else:
-                        label = inv_label_mapping[np.nonzero(y > 0)[0]]
-                        if label_count[label] < labels_per_epoch:
-                            verified_frames.extend(X)
-                            verified_frame_labels.extend(y)
-                            label_count[label] += 1
-                if (np.asarray(list(label_count.values())) == labels_per_epoch).all():
-                    print('{} labels for each class were added, starting fine tuning'.format(labels_per_epoch))
+                    for data, label in zip(X, y):
+                        if len(np.nonzero(label > 0)[0]) > 1:
+                            labels = inv_label_mapping[np.nonzero(label > 0)[0]]
+                            labels = [inv_label_mapping[l] for l in labels]
+                            for l in labels:
+                                if label_count[l] < labels_per_epoch:
+                                    verified_frames.extend(data)
+                                    verified_frame_labels.extend(label)
+                                    label_count[l] += 1
+                                    label_counter += 1
+                        else:
+                            label = inv_label_mapping[np.nonzero(label > 0)[0]]
+                            if label_count[label] < labels_per_epoch:
+                                verified_frames.extend(data)
+                                verified_frame_labels.extend(label)
+                                label_count[label] += 1
+                                label_counter += 1
+                if (np.asarray(list(label_count.values())) == labels_per_epoch).all() or label_counter >= label_threshold:
+                    print('{} labels were added, starting fine tuning'.format(label_counter))
                     break
 
 
@@ -176,7 +182,7 @@ def main():
             if epoch > 1:
                 if current_lwlrap > np.max(lwlraps):
                     print("Average lwlrap increased - Saving weights...\n")
-                    network.save("models/{}/{}_fold{}.hd5".format(cfg['features'], modelfile.replace('.py', ''), fold))
+                    network.save("models/{}/{}_fold{}_finetuned.hd5".format(cfg['features'], modelfile, fold))
                 if epoch >= cfg['start_linear_decay_finetune']:
                     lr = K.get_value(network.optimizer.lr)
                     lr = lr - lr_decay
@@ -184,19 +190,19 @@ def main():
                     print("Decreasing learning rate by {}...".format(cfg['lr_decrease']))
             else:
                 print("Average lwlrap increased - Saving weights...\n")
-                network.save("models/{}/{}_fold{}.hd5".format(cfg['features'], modelfile.replace('.py', ''), fold))
+                network.save("models/{}/{}_fold{}_finetuned.hd5".format(cfg['features'], modelfile, fold))
 
             lwlraps.append(current_lwlrap)
 
             # Save loss and learning curve of trained model
             save_learning_curve(accs,
-                                "{}/{}_fold{}_accuracy_learning_curve.pdf".format(cfg['features'], modelfile, fold),
+                                "{}/{}_fold{}_finetuned_accuracy_learning_curve.pdf".format(cfg['features'], modelfile, fold),
                                 'Accuracy Curve', 'Accuracy')
             save_learning_curve(losses,
-                                "{}/{}_fold{}_loss_curve.pdf".format(cfg['features'], modelfile,fold),
+                                "{}/{}_fold{}_finetuned_loss_curve.pdf".format(cfg['features'], modelfile,fold),
                                 'Loss Curve', 'Loss')
             save_learning_curve(lwlraps,
-                                '{}/{}_fold{}_lwlrap_curve.pdf'.format(cfg['features'], modelfile,fold),
+                                '{}/{}_fold{}_finetuned_lwlrap_curve.pdf'.format(cfg['features'], modelfile,fold),
                                 "Label Weighted Label Ranking Average Precision", 'lwlrap')
 
 if __name__ == '__main__':
