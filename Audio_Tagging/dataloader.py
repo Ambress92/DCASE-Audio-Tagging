@@ -250,6 +250,36 @@ def event_oversampling(X, feature_width=348):
 
         return X_new
 
+def frequency_masking(X, mf, F=27, v=128):
+
+    X_new = []
+    for x in X:
+        f = np.random.uniform(low=0, high=F, size=mf).astype(np.int)
+        diff = np.full(f.shape, (v-f))
+        f0 = [np.random.choice(np.arange(d)).astype(np.int) for d in diff]
+
+        for start, end in zip(f0, f):
+            x[start:start+end,:,:] = 0.0
+        X_new.append(x)
+
+    return np.asarray(X_new)
+
+def time_masking(X, mt, T=70, p=0.2):
+
+    X_new = []
+    for x in X:
+        t = np.random.uniform(low=0, high=T, size=mt).astype(np.int)
+        diff = np.full(t.shape, (x.shape[1]-t))
+        t0 = [np.random.choice(np.arange(d)) for d in diff]
+
+        for start, end in zip(t0, t):
+            if end > p*x.shape[1]:
+                end = x.shape[1]
+            x[:,start:start+end, :] = 0.0
+        X_new.append(x)
+
+    return np.asarray(X)
+
 def generate_in_background(generator, num_cached=10):
     """
     Runs a generator in a background thread, caching up to `num_cached` items.
@@ -281,7 +311,7 @@ def generate_in_background(generator, num_cached=10):
 
 def load_batches(filelist, batchsize, feature_path='../features/', data_path='../datasets/',
                  shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel', test=False,
-                 augment=True, feature_width=348, fixed_length=2784, jump=174):
+                 augment=False, mixup=True, feature_width=348, fixed_length=2784, jump=174):
     num_datapoints = len(filelist)
 
     while True:
@@ -300,8 +330,12 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
                                      feature_width=feature_width, jump=jump)
                 X = X[:,:,:,np.newaxis]
 
-                if augment:
+                if mixup:
                     X, y = mixup_augmentation(X, y)
+
+                if augment:
+                    X = frequency_masking(X, mf=2, v=X.shape[1])
+                    X = time_masking(X, mt=2)
 
                 yield (X, y)
             else:

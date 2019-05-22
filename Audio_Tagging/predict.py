@@ -55,7 +55,7 @@ def main():
     if options.filelist == 'validation':
         with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
             filelist = in_file.readlines()
-        batches = generate_in_background(load_batches(filelist, cfg['batchsize'], test=False, augment=False, features=cfg['features'],
+        batches = generate_in_background(load_batches(filelist, cfg['batchsize'], test=False, augment=False, mixup=False, features=cfg['features'],
                                                       jump=cfg['jump']), num_cached=10)
     else:
         filelist = os.listdir('../features/{}/test'.format(cfg['features']))

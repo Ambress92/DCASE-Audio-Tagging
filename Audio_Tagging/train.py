@@ -119,10 +119,10 @@ def main():
         train_batches = generate_in_background(
             dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True,
                                     features=cfg['features'], feature_width=cfg['feature_width'],
-                                    fixed_length=cfg['fixed_size'], jump=cfg['jump']), num_cached=100)
+                                    fixed_length=cfg['fixed_size'], jump=cfg['jump'], mixup=True, augment=False), num_cached=100)
         train_noisy_batches = dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True,
                                                       infinite=True, feature_width=cfg['feature_width'],
-                                                      features=cfg['features'],
+                                                      features=cfg['features'], mixup=True, augment=False,
                                                       fixed_length=cfg['fixed_size'], jump=cfg['jump'])
 
         # run training loop
@@ -147,7 +147,7 @@ def main():
 
             eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
                                                    feature_width=cfg['feature_width'], fixed_length=cfg['fixed_size'],
-                                                                          augment=False, jump=cfg['jump'])
+                                                                          mixup=True, augment=False, jump=cfg['jump'])
 
 
             for _ in tqdm.trange(
