@@ -32,7 +32,7 @@ def sample_from_spec(spec, frame_size, feature_width):
         yield spec[:, idx:idx+frame_size]
 
 def get_verified_files_dict(path='../datasets/'):
-    with open(path+'train_curated.csv', 'r') as in_file:
+    with open(os.path.join(path, 'train_curated.csv'), 'r') as in_file:
         data_config = in_file.readlines()
         data_config = data_config[1:]
 
@@ -42,7 +42,7 @@ def get_verified_files_dict(path='../datasets/'):
     return verified_files_dict
 
 def get_unverified_files_dict(path='../datasets/'):
-    with open(path+'train_noisy.csv', 'r') as in_file:
+    with open(os.path.join(path, 'train_noisy.csv'), 'r') as in_file:
         data_config = in_file.readlines()
         data_config = data_config[1:]
 
@@ -93,7 +93,7 @@ def load_test_features(filelist, features, path='../features/',
     """
     X = []
     for file in filelist:
-        data = np.load('{}/test/{}.npy'.format(path+features, file.rstrip().replace('.wav', '')))
+        data = np.load('{}/test/{}.npy'.format(os.path.join(path, features), file.rstrip().replace('.wav', '')))
 
         if features != 'mfcc':
             if data.shape[1] < fixed_length:
@@ -153,12 +153,12 @@ def load_features(filelist, features, num_classes, feature_path='../features/',
         file = file.rstrip()+'.wav'
         if file in curated_files_dict.keys():
             data = np.load(
-                '{}/train_curated/{}.npy'.format(feature_path+features, file.rstrip().replace('.wav', '')))
+                '{}/train_curated/{}.npy'.format(os.path.join(feature_path, features), file.rstrip().replace('.wav', '')))
 
             labels = curated_files_dict[file]
         else:
             data = np.load(
-                '{}/train_noisy/{}.npy'.format(feature_path+features, file.rstrip().replace('.wav', '')))
+                '{}/train_noisy/{}.npy'.format(os.path.join(feature_path, features), file.rstrip().replace('.wav', '')))
 
             labels = noisy_files_dict[file]
 
@@ -202,7 +202,7 @@ def mixup_augmentation(X, y,  alpha=0.3):
     # mix labels
     y1 = one_hot[:]
     y2 = one_hot[::-1]
-    y = y1 * y_l +  y2 * (1.0 - y_l)
+    y = y1 * y_l + y2 * (1.0 - y_l)
 
     return X.astype(np.float32), y.astype(np.float32)
 
@@ -379,7 +379,7 @@ def load_unverified_files(features=None):
     return unverified_files
 
 def get_label_mapping(path='../datasets/'):
-    with open(path+'train_curated.csv', 'r') as in_file:
+    with open(os.path.join(path, 'train_curated.csv'), 'r') as in_file:
         train_list = in_file.readlines()
 
     train_list = train_list[1:]
