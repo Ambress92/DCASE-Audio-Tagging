@@ -4,7 +4,7 @@
 from keras.layers import Conv2D, BatchNormalization, Activation, MaxPooling2D, Dropout, Lambda, AveragePooling2D, Input
 import keras.backend as K
 
-def shallow_cnn(data_format, num_classes, growth_rate):
+def densenet(data_format, num_classes, growth_rate):
     ini_filters = 64
 
     input = Input(shape=data_format)
@@ -80,6 +80,6 @@ def architecture(data_format, num_classes, growth_rate):
     Instantiates a network model for a given dictionary of input/output
     tensor formats (dtype, shape) and a given configuration.
     """
-    return shallow_cnn(data_format, num_classes, growth_rate)
+    return densenet(data_format, num_classes, growth_rate)
 
 
