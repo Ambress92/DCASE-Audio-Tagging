@@ -106,6 +106,7 @@ def main():
         lwlraps_eval = []
         lwlraps_train = []
         lr = cfg['lr']
+        noisy_lr = lr / 10
         min_curated_lr = 1e-5
         lr_decay = (lr-min_curated_lr)/(cfg['epochs']-cfg['start_linear_decay']+1)
         switch_train_set = cfg['switch_train_set']
@@ -135,12 +136,10 @@ def main():
                 
             
             if optimizer_changed:
-                # network.compile(optimizer=curated_optimizer, loss=cfg["loss"], metrics=['acc'])
                 K.set_value(network.optimizer.lr, lr)
                 optimizer_changed=False
             elif (epoch % switch_train_set) == 0:
                 noisy_lr = lr / 10
-                # network.compile(optimizer=noisy_optimizer, loss=cfg["loss"], metrics=['acc'])
                 K.set_value(network.optimizer.lr, noisy_lr)
 
             eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
@@ -201,7 +200,7 @@ def main():
                     epochs_without_decrase = 0
                     print("Average lwlrap increased - Saving weights...\n")
                     network.save("models/{}/{}_fold{}.hd5".format(cfg['features'], modelfile.replace('.py', ''), fold))
-                elif not cfg['linear_decay']:
+                elif not cfg['linear_decay'] and not cfg['sharp_drop']:
                     epochs_without_decrase += 1
                     if epochs_without_decrase == cfg['epochs_without_decrease']:
                         lr = K.get_value(network.optimizer.lr)
@@ -216,6 +215,12 @@ def main():
                         lr = lr - lr_decay
                         keras.backend.set_value(network.optimizer.lr, lr)
                         print("Decreasing learning rate by {}...".format(lr_decay))
+
+                if cfg['sharp_drop']:
+                    if epoch == cfg['sharp_drop_epoch']:
+                        lr = lr * cfg['drop_rate']
+                        K.set_value(network.optimizer.lr, lr)
+
 
             else:
                 print("Average lwlrap increased - Saving weights...\n")

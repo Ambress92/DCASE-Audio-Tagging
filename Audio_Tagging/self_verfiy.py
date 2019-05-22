@@ -72,10 +72,9 @@ def main():
         print('Start self verification loop...')
         verified_frames = []
         verified_frame_labels = []
-        label_count = {k:0 for k in label_mapping.keys()}
         labels_per_epoch = cfg['labels_per_epoch']
-        label_threshold = 1000
-        lr_decay = cfg['finetune_lr']/(cfg['self_verify_epochs']-cfg['start_linear_decay_finetune']+1)
+        min_lr = 1e-5
+        lr_decay = (cfg['finetune_lr'] - min_lr)/(cfg['self_verify_epochs']-cfg['start_linear_decay_finetune']+1)
 
         accs = []
         losses = []
@@ -86,12 +85,14 @@ def main():
             epoch_train_acc = []
             epoch_train_loss = []
             epoch_lwlrap_train = []
-            label_counter = 0
+            label_count = {k: 0 for k in label_mapping.keys()}
 
-            verify_noisy_batches = dataloader.generate_in_background(dataloader.load_batches_verification(verify_files_noisy, k=cfg['k'],
-                                                                        shuffle=True, infinite=True,
-                                                                        features=cfg['features'], feature_width=cfg['feature_width'],
-                                                                        fixed_length=cfg['fixed_size']))
+            verify_noisy_batches = dataloader.generate_in_background(
+                dataloader.load_batches_verification(verify_files_noisy, k=cfg['k'],
+                                                     shuffle=True, infinite=False,
+                                                     features=cfg['features'], feature_width=cfg['feature_width'],
+                                                     fixed_length=cfg['fixed_size'], jump=cfg['jump']))
+
             print('Predict on noisy data...')
             for X, y in tqdm.tqdm(verify_noisy_batches, desc='Batch'):
                 predictions = network.predict(x=X, batch_size=cfg['verify_batchsize'], verbose=0)
@@ -109,7 +110,6 @@ def main():
                                 verified_frames.append(X[i])
                                 verified_frame_labels.append(y[i])
                                 label_count[l] += 1
-                                label_counter += 1
 
                 if current_lwlrap > 0.9:
                     print('lwlrap is greater than 90%')
@@ -122,21 +122,20 @@ def main():
                                     verified_frames.extend(data)
                                     verified_frame_labels.extend(label)
                                     label_count[l] += 1
-                                    label_counter += 1
                         else:
                             label = inv_label_mapping[np.nonzero(label > 0)[0]]
                             if label_count[label] < labels_per_epoch:
                                 verified_frames.extend(data)
                                 verified_frame_labels.extend(label)
                                 label_count[label] += 1
-                                label_counter += 1
-                if (np.asarray(list(label_count.values())) == labels_per_epoch).all() or label_counter >= label_threshold:
-                    print('{} labels were added, starting fine tuning'.format(label_counter))
+
+                if (np.asarray(list(label_count.values())) == labels_per_epoch).all():
+                    print('{} labels were added, starting fine tuning'.format(np.sum(list(label_count.values()))))
                     break
 
 
             train_batches = dataloader.load_batches(validation_files, cfg['verify_batchsize'], shuffle=True,
-                                                    infinite=True, features=cfg['features'])
+                                                    infinite=True, features=cfg['features'], jump=cfg['jump'])
             steps_per_epoch = len(validation_files) // cfg['verify_batchsize']
 
             print('Finetuning on curated validation set...')
@@ -187,7 +186,7 @@ def main():
                     lr = K.get_value(network.optimizer.lr)
                     lr = lr - lr_decay
                     K.set_value(network.optimizer.lr, lr)
-                    print("Decreasing learning rate by {}...".format(cfg['lr_decrease']))
+                    print("Decreasing learning rate by {}...".format(lr_decay))
             else:
                 print("Average lwlrap increased - Saving weights...\n")
                 network.save("models/{}/{}_fold{}_finetuned.hd5".format(cfg['features'], modelfile, fold))

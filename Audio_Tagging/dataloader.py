@@ -315,7 +315,7 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
 
 def load_batches_verification(filelist, feature_path='../features/', data_path='../datasets/',
                  shuffle=False, drop_remainder=False, infinite=False, num_classes=80, features='mel', k=24, feature_width=348,
-                    fixed_length=2784):
+                    fixed_length=2784, jump=174):
     num_datapoints = len(filelist)
 
     while True:
@@ -332,7 +332,11 @@ def load_batches_verification(filelist, feature_path='../features/', data_path='
 
                 X_temp, y_temp = load_features([file], features=features, num_classes=num_classes,
                                      feature_path=feature_path, data_path=data_path, fixed_length=fixed_length,
-                                     feature_width=feature_width)
+                                     feature_width=feature_width, jump=jump)
+
+                if X_temp.shape[0] == 0:
+                    continue
+
                 rand_ind = np.random.choice(X_temp.shape[0])
                 X_train.append(X_temp[rand_ind])
                 y_train.append(y_temp[rand_ind])

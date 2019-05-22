@@ -343,13 +343,13 @@ def main():
             preds_single_label.append(p)
             truth_single_label.append(t)
 
-    preds_single_label = [np.argmax(p) for p in preds_single_label]
-    truth_single_label = [np.argmax(t) for t in truth_single_label]
-    p, r, f, s = precision_recall_fscore_support(truth_single_label, preds_single_label)
-    print_precision_recall_fscore(preds_single_label, truth_single_label, true_counts, inv_label_mapping)
-    plot_results_table(p, r, f, true_counts, inv_label_mapping, cfg['num_classes'], exp_name, options.features)
-    save_confusion_matrix(preds_single_label, truth_single_label, exp_name, options.features, inv_label_mapping)
-    plot_per_class_metric(f, inv_label_mapping, exp_name,  options.features, metric_name='fscore')
+    # preds_single_label = [np.argmax(p) for p in preds_single_label]
+    # truth_single_label = [np.argmax(t) for t in truth_single_label]
+    # p, r, f, s = precision_recall_fscore_support(truth_single_label, preds_single_label)
+    # print_precision_recall_fscore(preds_single_label, truth_single_label, true_counts, inv_label_mapping)
+    # plot_results_table(p, r, f, true_counts, inv_label_mapping, cfg['num_classes'], exp_name, options.features)
+    # save_confusion_matrix(preds_single_label, truth_single_label, exp_name, options.features, inv_label_mapping)
+    # plot_per_class_metric(f, inv_label_mapping, exp_name,  options.features, metric_name='fscore')
     plot_per_class_metric(per_class_lwlrap, inv_label_mapping, exp_name, options.features, metric_name='lwlrap')
     # avg_precisions = np.mean([avg_precision(a, p) for a, p in zip(true_labels, preds)])
     # print('Average precision: {}'.format(avg_precisions))
