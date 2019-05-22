@@ -47,7 +47,7 @@ def shallow_cnn(data_format, num_classes):
     model.add(Lambda(lambda x: K.mean(x, axis=1)))
     model.add(Lambda(lambda x: K.max(x, axis=1)))
     # model.add(GlobalAveragePooling2D(data_format='channels_last'))
-    model.add(Activation(activation='sigmoid'))
+    model.add(Activation(activation='softmax'))
 
     print(model.summary())
 
