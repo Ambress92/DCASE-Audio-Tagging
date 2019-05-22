@@ -43,7 +43,7 @@ def shallow_cnn(data_format, num_classes):
     model.add(Dropout(0.5))
 
     # classification block
-    model.add(Conv2D(num_classes, (1, 1), strides=1, activation='linear', padding='same', kernel_initializer='he_normal', use_bias=False))
+    model.add(Conv2D(num_classes, (1, 1), strides=1, activation='relu', padding='same', kernel_initializer='he_normal', use_bias=False))
     model.add(Lambda(lambda x: K.mean(x, axis=1)))
     model.add(Lambda(lambda x: K.max(x, axis=1)))
     # model.add(GlobalAveragePooling2D(data_format='channels_last'))

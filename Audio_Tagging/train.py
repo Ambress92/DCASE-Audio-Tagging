@@ -81,7 +81,10 @@ def main():
         print("Preparing training function...")
 
         train_formats = (cfg['feature_height'], cfg['feature_width'], cfg['channels'])
-        network = selected_model.architecture(train_formats, cfg['num_classes'])
+        if not 'densenet' in modelfile:
+            network = selected_model.architecture(train_formats, cfg['num_classes'])
+        else:
+            network = selected_model.architecture(train_formats, cfg['num_classes'], 128)
 
         # Add optimizer and compile model
         print("Compiling model ...")
