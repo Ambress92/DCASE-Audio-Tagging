@@ -1,18 +1,19 @@
-import dataloader
-from dataloader import generate_in_background
-import numpy as np
-np.random.seed(101)
 import os
-import utils
-import keras
 from argparse import ArgumentParser
+
 import config
-import tqdm
-import matplotlib.pyplot as plt
-from sklearn.metrics import label_ranking_average_precision_score
+import dataloader
+import keras
 import keras.backend as K
-import tensorflow as tf
-import sys
+import matplotlib.pyplot as plt
+import numpy as np
+import tqdm
+import utils
+from dataloader import generate_in_background
+from sklearn.metrics import label_ranking_average_precision_score
+
+np.random.seed(101)
+
 
 def opts_parser():
     descr = "Trains a neural network."
@@ -22,6 +23,7 @@ def opts_parser():
             help='File to save the learned weights to')
     config.prepare_argument_parser(parser)
     return parser
+
 
 def save_learning_curve(metric, val_metric, filename, title, ylabel):
     plt.plot(metric)
@@ -35,6 +37,7 @@ def save_learning_curve(metric, val_metric, filename, title, ylabel):
     plt.savefig('plots/' + filename)
     plt.close()
 
+
 def lwlrap_metric(y_true, y_pred):
     sample_weight = np.sum(y_true > 0, axis=1)
     nonzero_weight_sample_indices = np.flatnonzero(sample_weight > 0)
@@ -44,12 +47,14 @@ def lwlrap_metric(y_true, y_pred):
         sample_weight=sample_weight[nonzero_weight_sample_indices])
     return overall_lwlrap
 
+
 def save_model_params(modelfile, cfg):
     """
     Saves the learned weights to `filename`, and the corresponding
     configuration to ``os.path.splitext(filename)[0] + '.vars'``.
     """
     config.write_config_file(modelfile + '_auto.vars', cfg)
+
 
 def main():
     parser = opts_parser()
@@ -115,7 +120,6 @@ def main():
         switch_train_set = cfg['switch_train_set']
         optimizer_changed=False
 
-
         train_batches = generate_in_background(
             dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True,
                                     features=cfg['features'], feature_width=cfg['feature_width'],
@@ -124,6 +128,8 @@ def main():
                                                       infinite=True, feature_width=cfg['feature_width'],
                                                       features=cfg['features'], mixup=True, augment=False,
                                                       fixed_length=cfg['fixed_size'], jump=cfg['jump'])
+
+        swa_weights = []
 
         # run training loop
         print("Training:")
@@ -136,8 +142,7 @@ def main():
             epoch_lwlrap_train = []
             epoch_lwlrap_eval = []
             steps_per_epoch = len(train_files) // cfg['batchsize']
-                
-            
+
             if optimizer_changed:
                 K.set_value(network.optimizer.lr, lr)
                 optimizer_changed=False
@@ -147,8 +152,7 @@ def main():
 
             eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
                                                    feature_width=cfg['feature_width'], fixed_length=cfg['fixed_size'],
-                                                                          mixup=True, augment=False, jump=cfg['jump'])
-
+                                                                          mixup=False, augment=False, jump=cfg['jump'])
 
             for _ in tqdm.trange(
                     steps_per_epoch,
@@ -188,7 +192,6 @@ def main():
 
                 epoch_lwlrap_eval.append(lwlrap_metric(np.asarray(y_test), np.asarray(predictions)))
 
-
             val_acc.append(np.mean(batch_val_acc))
             val_loss.append(np.mean(batch_val_loss))
 
@@ -224,7 +227,6 @@ def main():
                         lr = lr * cfg['drop_rate']
                         K.set_value(network.optimizer.lr, lr)
 
-
             else:
                 print("Average lwlrap increased - Saving weights...\n")
                 network.save("models/{}/{}_fold{}.hd5".format(cfg['features'], modelfile.replace('.py', ''), fold))
@@ -242,6 +244,19 @@ def main():
             save_learning_curve(train_loss, val_loss, "{}/{}_fold{}_loss_curve.pdf".format(cfg['features'], modelfile.replace('.py', ''), fold), 'Loss Curve', 'Loss')
             save_learning_curve(lwlraps_train, lwlraps_eval, '{}/{}_fold{}_lwlrap_curve.pdf'.format(cfg['features'], modelfile.replace('.py', ''), fold),
                                 "Label Weighted Label Ranking Average Precision", 'lwlrap')
+
+            swa_epoch = cfg['epochs'] + 1 - cfg['swa_epochs']
+            if epoch == swa_epoch:
+                # first swa epoch
+                swa_weights = network.get_weights()
+            elif epoch > swa_epoch:
+                # beginning averaging
+                for i in range(len(network.layers)):
+                    swa_weights[i] = (swa_weights[i] * (epoch - swa_epoch) + network.get_weights()[i]) \
+                                                    / ((epoch - swa_epoch) + 1)
+        # after end of training, store averaged (swa) model
+        network.set_weights(swa_weights)
+        network.save('models/{}/{}_fold{}.hd5'.format(cfg['features'], modelfile.replace('.py', '_swa'), fold))
 
 
 if __name__ == '__main__':
