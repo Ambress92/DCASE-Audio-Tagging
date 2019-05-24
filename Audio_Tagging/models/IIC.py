@@ -92,8 +92,8 @@ def semi_supervised_IIC(input_shape, num_classes, final_act):
     conv7 = Conv2D(num_classes, (1, 1), strides=1, activation='relu', padding='same', kernel_initializer='he_normal')
     lambda_7_1 = Lambda(lambda x: K.mean(x, axis=1))
     lambda_7_2 = Lambda(lambda x: K.max(x, axis=1))
-    cluster_output1 = Activation(activation="softmax")
-    cluster_output2 = Activation(activation="softmax")
+    cluster_output1 = Activation(activation="softmax", name='cluster_output')
+    cluster_output2 = Activation(activation="softmax", name='cluster_output_aug')
 
     # classification block
     conv7_clf = Conv2D(num_classes, (1, 1), strides=1, activation='linear', padding='same', kernel_initializer='he_normal')
@@ -231,6 +231,6 @@ def architecture(data_format, num_classes):
     Instantiates a network model for a given dictionary of input/output
     tensor formats (dtype, shape) and a given configuration.
     """
-    return semi_supervised_IIC(data_format, num_classes, final_act='sigmoid')
+    return semi_supervised_IIC(data_format, num_classes, final_act='softmax')
 
 

@@ -91,6 +91,7 @@ def dump_cqt_specs(dirname):
             plot_spectrogram(spec, 'CQT Spectrogram after silence clipping', 'cqt')
 
         spec = normalize_features(cqt)
+        os.remove('../../datasets/{}/{}'.format(dirname, aug_audio_file))
 
         if args.plot:
             plot_spectrogram(spec, 'CQT Spectrogram Normalized', 'cqt')

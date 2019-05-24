@@ -334,8 +334,10 @@ def load_batches(filelist, batchsize, feature_path='../features/', data_path='..
                     X, y = mixup_augmentation(X, y)
 
                 if augment:
-                    X = frequency_masking(X, mf=2, v=X.shape[1])
-                    X = time_masking(X, mt=2)
+                    X_aug = frequency_masking(X, mf=2, v=X.shape[1])
+                    X_aug = time_masking(X_aug, mt=2)
+                    yield([X, X_aug], [y, y])
+                    continue
 
                 yield (X, y)
             else:

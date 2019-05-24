@@ -11,7 +11,6 @@ import tqdm
 import utils
 from dataloader import generate_in_background
 from sklearn.metrics import label_ranking_average_precision_score
-
 np.random.seed(101)
 
 
@@ -96,7 +95,7 @@ def main():
         optimizer = keras.optimizers.Adam(lr=cfg['lr'])
         if 'IIC' in modelfile:
             network.compile(optimizer=optimizer, loss={'clf_output':cfg['loss'],
-                                                       'clf_output_augmented':cfg['loss']}, metrics=['acc'])
+                                                       'clf_output_augmented':cfg['loss']})
         else:
             network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=['acc'])
 
@@ -110,6 +109,8 @@ def main():
         val_acc = []
         train_loss = []
         train_acc = []
+        mutual_inf = []
+        val_mutual_inf = []
         epochs_without_decrase = 0
         lwlraps_eval = []
         lwlraps_train = []
@@ -120,14 +121,26 @@ def main():
         switch_train_set = cfg['switch_train_set']
         optimizer_changed=False
 
-        train_batches = generate_in_background(
-            dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True,
-                                    features=cfg['features'], feature_width=cfg['feature_width'],
-                                    fixed_length=cfg['fixed_size'], jump=cfg['jump'], mixup=True, augment=False), num_cached=100)
-        train_noisy_batches = dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True,
-                                                      infinite=True, feature_width=cfg['feature_width'],
-                                                      features=cfg['features'], mixup=True, augment=False,
-                                                      fixed_length=cfg['fixed_size'], jump=cfg['jump'])
+
+        if not 'IIC' in modelfile:
+            train_batches = generate_in_background(
+                dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True,
+                                        features=cfg['features'], feature_width=cfg['feature_width'],
+                                        fixed_length=cfg['fixed_size'], jump=cfg['jump'], mixup=True, augment=False), num_cached=100)
+            train_noisy_batches = dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True,
+                                                          infinite=True, feature_width=cfg['feature_width'],
+                                                          features=cfg['features'], mixup=True, augment=False,
+                                                          fixed_length=cfg['fixed_size'], jump=cfg['jump'])
+        else:
+            train_batches = generate_in_background(
+                dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True,
+                                        features=cfg['features'], feature_width=cfg['feature_width'],
+                                        fixed_length=cfg['fixed_size'], jump=cfg['jump'], mixup=False, augment=True),
+                num_cached=100)
+            train_noisy_batches = dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True,
+                                                          infinite=True, feature_width=cfg['feature_width'],
+                                                          features=cfg['features'], mixup=False, augment=True,
+                                                          fixed_length=cfg['fixed_size'], jump=cfg['jump'])
 
         swa_weights = []
 
@@ -141,6 +154,8 @@ def main():
             batch_val_acc = []
             epoch_lwlrap_train = []
             epoch_lwlrap_eval = []
+            epoch_mutual_inf = []
+            epoch_val_mutual_inf = []
             steps_per_epoch = len(train_files) // cfg['batchsize']
 
             if optimizer_changed:
@@ -150,9 +165,17 @@ def main():
                 noisy_lr = lr / 10
                 K.set_value(network.optimizer.lr, noisy_lr)
 
-            eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
-                                                   feature_width=cfg['feature_width'], fixed_length=cfg['fixed_size'],
+
+            if not 'IIC' in modelfile:
+                eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False, features=cfg['features'],
+                                                       feature_width=cfg['feature_width'], fixed_length=cfg['fixed_size'],
                                                                           mixup=False, augment=False, jump=cfg['jump'])
+            else:
+                eval_batches = dataloader.load_batches(eval_files, cfg['batchsize'], infinite=False,
+                                                       features=cfg['features'],
+                                                       feature_width=cfg['feature_width'],
+                                                       fixed_length=cfg['fixed_size'],
+                                                       mixup=False, augment=True, jump=cfg['jump'])
 
             for _ in tqdm.trange(
                     steps_per_epoch,
@@ -165,40 +188,68 @@ def main():
                     X_train, y_train = next(train_batches)
 
                 metrics = network.train_on_batch(x=X_train, y=y_train)
-                epoch_train_acc.append(metrics[1])
-                epoch_train_loss.append(metrics[0])
+                if not 'IIC' in modelfile:
+                    epoch_train_acc.append(metrics[1])
+                    epoch_train_loss.append(metrics[0])
+                else:
+                    epoch_mutual_inf.append(metrics[0])
+                    epoch_train_loss.append(metrics[1])
 
                 preds = network.predict(x=X_train, batch_size=cfg['batchsize'], verbose=0)
+                if not 'IIC' in modelfile:
+                    epoch_lwlrap_train.append(lwlrap_metric(np.asarray(y_train), np.asarray(preds)))
+                else:
+                    epoch_lwlrap_train.append(lwlrap_metric(np.asarray(y_train[0]), np.asarray(preds[0])))
 
-                epoch_lwlrap_train.append(lwlrap_metric(np.asarray(y_train), np.asarray(preds)))
+            if not 'IIC' in modelfile:
+                print('Accuracy on training set after epoch {}: {}\n'.format(epoch, np.mean(epoch_train_acc)))
+                train_acc.append(np.mean(epoch_train_acc))
+
+            else:
+                print('Mutual Information on training set after epoch {}: {}\n'.format(epoch, np.mean(epoch_mutual_inf)))
+                mutual_inf.append(np.mean(epoch_mutual_inf))
 
             print('Loss on training set after epoch {}: {}'.format(epoch, np.mean(epoch_train_loss)))
-            print('Accuracy on training set after epoch {}: {}\n'.format(epoch, np.mean(epoch_train_acc)))
             print('Label weighted label ranking average precision on training set after epoch {}: {}'.format(epoch,
-                                                                                                             np.mean(epoch_lwlrap_train)))
+                                                                                                             np.mean(
+                                                                                                                 epoch_lwlrap_train)))
 
             train_loss.append(np.mean(epoch_train_loss))
-            train_acc.append(np.mean(epoch_train_acc))
             lwlraps_train.append(np.mean(epoch_lwlrap_train))
 
             for X_test, y_test in tqdm.tqdm(eval_batches, desc='Batch'):
 
                 metrics = network.test_on_batch(x=X_test, y=y_test)
 
-                batch_val_loss.append(metrics[0])
-                batch_val_acc.append(metrics[1])
+                if not 'IIC' in modelfile:
+                    batch_val_loss.append(metrics[0])
+                    batch_val_acc.append(metrics[1])
+                else:
+                    batch_val_loss.append(metrics[1])
+                    epoch_val_mutual_inf.append(metrics[0])
+
 
                 predictions = network.predict(x=X_test, batch_size=cfg['batchsize'], verbose=0)
 
-                epoch_lwlrap_eval.append(lwlrap_metric(np.asarray(y_test), np.asarray(predictions)))
+                if not 'IIC' in modelfile:
+                    epoch_lwlrap_eval.append(lwlrap_metric(np.asarray(y_test), np.asarray(predictions)))
+                else:
+                    epoch_lwlrap_eval.append(lwlrap_metric(np.asarray(y_test[0]), np.asarray(predictions[0])))
 
-            val_acc.append(np.mean(batch_val_acc))
+
+            if not 'IIC' in modelfile:
+                val_acc.append(np.mean(batch_val_acc))
+                print('Accuracy on validation set after epoch {}: {}'.format(epoch, np.mean(batch_val_acc)))
+            else:
+                val_mutual_inf.append(np.mean(epoch_val_mutual_inf))
+                print('Mutual Information on validation set after epoch {}: {}'.format(epoch, np.mean(epoch_val_mutual_inf)))
+
             val_loss.append(np.mean(batch_val_loss))
-
             print('Loss on validation set after epoch {}: {}'.format(epoch, np.mean(batch_val_loss)))
-            print('Accuracy on validation set after epoch {}: {}'.format(epoch, np.mean(batch_val_acc)))
             print('Label weighted label ranking average precision on validation set after epoch {}: {}'.format(epoch,
-                                                                                                   np.mean(epoch_lwlrap_eval)))
+                                                                                                               np.mean(
+                                                                                                                   epoch_lwlrap_eval)))
+
             current_lwlrap = np.mean(epoch_lwlrap_eval)
 
             if epoch > 1:
@@ -240,7 +291,13 @@ def main():
                 os.makedirs('plots/{}'.format(cfg['features']))
 
             # Save loss and learning curve of trained model
-            save_learning_curve(train_acc, val_acc, "{}/{}_fold{}_accuracy_learning_curve.pdf".format(cfg['features'], modelfile.replace('.py', ''), fold), 'Accuracy', 'Accuracy')
+            if not 'IIC' in modelfile:
+                save_learning_curve(train_acc, val_acc, "{}/{}_fold{}_accuracy_learning_curve.pdf".format(cfg['features'], modelfile.replace('.py', ''), fold), 'Accuracy', 'Accuracy')
+            else:
+                save_learning_curve(mutual_inf, val_mutual_inf,
+                                    "{}/{}_fold{}_mutual_inf_learning_curve.pdf".format(cfg['features'],
+                                                                                      modelfile.replace('.py', ''),
+                                                                                      fold), 'Mutual Information', 'Mutual Information')
             save_learning_curve(train_loss, val_loss, "{}/{}_fold{}_loss_curve.pdf".format(cfg['features'], modelfile.replace('.py', ''), fold), 'Loss Curve', 'Loss')
             save_learning_curve(lwlraps_train, lwlraps_eval, '{}/{}_fold{}_lwlrap_curve.pdf'.format(cfg['features'], modelfile.replace('.py', ''), fold),
                                 "Label Weighted Label Ranking Average Precision", 'lwlrap')
