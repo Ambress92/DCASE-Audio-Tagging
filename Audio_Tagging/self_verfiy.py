@@ -204,5 +204,20 @@ def main():
                                 '{}/{}_fold{}_finetuned_lwlrap_curve.pdf'.format(cfg['features'], modelfile,fold),
                                 "Label Weighted Label Ranking Average Precision", 'lwlrap')
 
+            swa_epoch = cfg['epochs'] + 1 - cfg['swa_epochs']
+            if epoch == swa_epoch:
+                # first swa epoch
+                swa_weights = network.get_weights()
+            elif epoch > swa_epoch:
+                # beginning averaging
+                for i in range(len(network.layers)):
+                    swa_weights[i] = (swa_weights[i] * (epoch - swa_epoch) + network.get_weights()[i]) \
+                                     / ((epoch - swa_epoch) + 1)
+
+        # after end of training, store averaged (swa) model
+        network.set_weights(swa_weights)
+        network.save('models/{}/{}_fold{}.hd5'.format(cfg['features'], modelfile.replace('.py', '_swa'), fold))
+
+
 if __name__ == '__main__':
     main()
