@@ -192,8 +192,8 @@ def semi_supervised_IIC(input_shape, num_classes, final_act):
     augmented_model = dropout6_1(augmented_model)
     augmented_model = conv6_2(augmented_model)
     augmented_model = batch_norm6_2(augmented_model)
-    augmented_model = dropout6_2(augmented_model)
-    augmented_model = conv7(augmented_model)
+    augmented_model_clf_fork = dropout6_2(augmented_model)
+    augmented_model = conv7(augmented_model_clf_fork)
     augmented_model = lambda_7_1(augmented_model)
     augmented_model = lambda_7_2(augmented_model)
     output2 = cluster_output2(augmented_model)
@@ -205,12 +205,12 @@ def semi_supervised_IIC(input_shape, num_classes, final_act):
     clf_output = output_clf(clf_model)
 
     # classification block for augmented image
-    clf_model_augmented = conv7_clf(clf_fork)
+    clf_model_augmented = conv7_clf(augmented_model_clf_fork)
     clf_model_augmented = lambda_7_1_clf(clf_model_augmented)
     clf_model_augmented = lambda_7_2_clf(clf_model_augmented)
     clf_output_augmented = output_clf_augmented(clf_model_augmented)
 
-    model = Model(inputs=[input, augmented_input], outputs=[output1, output2, clf_output, clf_output_augmented])
+    model = Model(inputs=[input, augmented_input], outputs=[clf_output, clf_output_augmented])
 
     P = (tf.expand_dims(output1, axis=2) * tf.expand_dims(output2, axis=1))
     P = tf.reduce_sum(P, axis=0)
