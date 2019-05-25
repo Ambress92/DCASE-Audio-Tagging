@@ -212,7 +212,7 @@ def main():
                 swa_weights = network.get_weights()
             elif epoch > swa_epoch:
                 # beginning averaging
-                for i in range(len(network.layers)):
+                for i in range(len(swa_weights)):
                     swa_weights[i] = (swa_weights[i] * (epoch - swa_epoch) + network.get_weights()[i]) \
                                      / ((epoch - swa_epoch) + 1)
 
