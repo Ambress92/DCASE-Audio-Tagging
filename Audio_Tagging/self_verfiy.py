@@ -53,13 +53,12 @@ def main():
                yaml_model = yaml_file.read()
             network = model_from_yaml(yaml_model)
             network.load_weights(modelfile.replace('.yaml', '.hd5'))
+            optimizer = Adam(lr=cfg['finetune_lr'])
+            network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=['acc'])
             modelfile = modelfile.replace('.yaml', '')
         else:
             network = load_model("models/{}/{}_fold{}.hd5".format(cfg['features'], modelfile.replace('.py', ''), fold))
             modelfile = modelfile.replace('.py', '')
-
-        optimizer = Adam(lr=cfg['finetune_lr'])
-        network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=['acc'])
 
         verify_files_noisy = []
         validation_files = []
@@ -135,7 +134,8 @@ def main():
 
 
             train_batches = dataloader.load_batches(validation_files, cfg['verify_batchsize'], shuffle=True,
-                                                    infinite=True, features=cfg['features'], jump=cfg['jump'])
+                                                    infinite=True, features=cfg['features'], jump=cfg['jump'],
+                                                    mixup=False, augment=False)
             steps_per_epoch = len(validation_files) // cfg['verify_batchsize']
 
             print('Finetuning on curated validation set...')
