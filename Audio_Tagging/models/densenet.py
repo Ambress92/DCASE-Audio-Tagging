@@ -6,7 +6,7 @@ import keras.backend as K
 from keras.models import Model
 
 def densenet(data_format, num_classes, growth_rate):
-    ini_filters = 64
+    ini_filters = 32
 
     input = Input(shape=data_format)
     model =Conv2D(ini_filters, (5, 5), strides=2, activation='relu', padding='same',
@@ -21,7 +21,7 @@ def densenet(data_format, num_classes, growth_rate):
     model = Conv2D(2 * ini_filters, (3, 3), strides=1, activation='relu', padding='same', kernel_initializer='he_normal', use_bias=False)(input1)
     out2 =BatchNormalization(momentum=0.9, axis=-1)(model)
 
-    out1 = Lambda(lambda x: K.tile(x, [1,1,1,2]))(out1)
+    out1 = Lambda(lambda x: K.tile(x, [1,1,1,4]))(out1)
     input2 = concatenate([pooled1_input, out1, out2], axis=-1)
 
     model = Conv2D(2 * ini_filters, (3, 3), strides=1, activation='relu', padding='same', kernel_initializer='he_normal', use_bias=False)(input2)
@@ -29,14 +29,14 @@ def densenet(data_format, num_classes, growth_rate):
     model =AveragePooling2D((2, 3), strides=(2, 3))(model)
     out3 =Dropout(0.3)(model)
     pooled1_out1 = AveragePooling2D((2,3), strides=(2,3))(out1)
-    pooled1_out1 = Lambda(lambda x: K.tile(x, [1,1,1,2]))(pooled1_out1)
-    pooled1_out2 = AveragePooling2D((2,3), strides=(2,3))(out2)
+    pooled1_out2 = Lambda(lambda x: K.tile(AveragePooling2D((2,3), strides=(2,3))(x), [1,1,1,2]))(out2)
     pooled2_input = AveragePooling2D((2,3), strides=(2,3))(pooled1_input)
 
 
     input3 = concatenate([pooled2_input, pooled1_out1, pooled1_out2, out3], axis=-1)
 
     model = Conv2D(4 * ini_filters, (3, 3), strides=1, activation='relu', padding='same', kernel_initializer='he_normal', use_bias=False)(input3)
+    out3 = Lambda(lambda x: K.tile(x, [1,1,1,2]))(out3)
     out4 =BatchNormalization(momentum=0.9, axis=-1)(model)
 
 
@@ -55,13 +55,13 @@ def densenet(data_format, num_classes, growth_rate):
 
     input5 = concatenate([pooled3_input, pooled2_out1, pooled2_out2, pooled1_out3, pooled1_out4, out5], axis=-1)
 
-    model = Conv2D(8 * ini_filters, (1, 1), strides=1, activation='relu', padding='same', kernel_initializer='he_normal',
+    model = Conv2D(4 * ini_filters, (1, 1), strides=1, activation='relu', padding='same', kernel_initializer='he_normal',
                use_bias=False)(input5)
     out6 = BatchNormalization(momentum=0.9, axis=-1)(model)
 
     input6 = concatenate([pooled3_input, pooled2_out1, pooled2_out2, pooled1_out3, pooled1_out4, out5, out6], axis=-1)
 
-    model = Conv2D(8 * ini_filters, (1, 1), strides=1, activation='relu', padding='same', kernel_initializer='he_normal',
+    model = Conv2D(4 * ini_filters, (1, 1), strides=1, activation='relu', padding='same', kernel_initializer='he_normal',
                use_bias=False)(input6)
     model =BatchNormalization(momentum=0.9, axis=-1)(model)
     out7 =Dropout(0.5)(model)
