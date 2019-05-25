@@ -26,12 +26,12 @@ def densenet(data_format, num_classes, growth_rate):
 
     model = Conv2D(2 * ini_filters, (3, 3), strides=1, activation='relu', padding='same', kernel_initializer='he_normal', use_bias=False)(input2)
     model =BatchNormalization(momentum=0.9, axis=-1)(model)
-    model =AveragePooling2D((2, 2), strides=(2, 2))(model)
+    model =AveragePooling2D((2, 3), strides=(2, 3))(model)
     out3 =Dropout(0.3)(model)
-    pooled1_out1 = AveragePooling2D((2,2), strides=(2,2))(out1)
+    pooled1_out1 = AveragePooling2D((2,3), strides=(2,3))(out1)
     pooled1_out1 = Lambda(lambda x: K.tile(x, [1,1,1,2]))(pooled1_out1)
-    pooled1_out2 = AveragePooling2D((2,2), strides=(2,2))(out2)
-    pooled2_input = AveragePooling2D((2,2), strides=(2,2))(pooled1_input)
+    pooled1_out2 = AveragePooling2D((2,3), strides=(2,3))(out2)
+    pooled2_input = AveragePooling2D((2,3), strides=(2,3))(pooled1_input)
 
 
     input3 = concatenate([pooled2_input, pooled1_out1, pooled1_out2, out3], axis=-1)

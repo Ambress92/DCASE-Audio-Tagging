@@ -53,13 +53,13 @@ def main():
                yaml_model = yaml_file.read()
             network = model_from_yaml(yaml_model)
             network.load_weights(modelfile.replace('.yaml', '.hd5'))
-            optimizer = Adam(lr = cfg['finetune_lr'])
-            network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=['acc'])
             modelfile = modelfile.replace('.yaml', '')
         else:
             network = load_model("models/{}/{}_fold{}.hd5".format(cfg['features'], modelfile.replace('.py', ''), fold))
-            K.set_value(network.optimizer.lr, cfg['finetune_lr'])
             modelfile = modelfile.replace('.py', '')
+
+        optimizer = Adam(lr=cfg['finetune_lr'])
+        network.compile(optimizer=optimizer, loss=cfg["loss"], metrics=['acc'])
 
         verify_files_noisy = []
         validation_files = []
@@ -169,6 +169,8 @@ def main():
 
                 network.train_on_batch(x=X_train, y=y_train)
 
+            del verified_frame_labels_training
+            del verified_frames_training
             print('Loss on training set after epoch {}: {}'.format(epoch, np.mean(epoch_train_loss)))
             print('Accuracy on training set after epoch {}: {}\n'.format(epoch, np.mean(epoch_train_acc)))
             print('Label weighted label ranking average precision on training set after epoch {}: {}'.format(epoch,

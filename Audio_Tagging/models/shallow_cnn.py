@@ -24,7 +24,7 @@ def shallow_cnn(data_format, num_classes):
     model.add(
         Conv2D(2 * ini_filters, (3, 3), strides=1, activation='relu', padding='same', kernel_initializer='he_normal', use_bias=False))
     model.add(BatchNormalization(momentum=0.9, axis=-1))
-    model.add(AveragePooling2D((2, 2), strides=(2, 2)))
+    model.add(AveragePooling2D((2, 3), strides=(2, 3)))
     model.add(Dropout(0.3))
 
     model.add(
