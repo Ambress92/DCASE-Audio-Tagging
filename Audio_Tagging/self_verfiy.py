@@ -9,6 +9,7 @@ from keras.models import model_from_yaml
 import tqdm
 import keras.backend as K
 from keras.optimizers import Adam
+from sklearn.utils import shuffle
 
 def opts_parser():
     descr = "Trains a neural network."
@@ -155,9 +156,9 @@ def main():
 
             print('Finetuning on self verified labels...')
             steps_per_epoch = len(verified_frames) // cfg['verify_batchsize']
-            verified_frames_training = np.asarray(verified_frames)
             verified_frame_labels_training = np.asarray(verified_frame_labels)
-            verified_frames_training, verified_frame_labels_training = dataloader.unison_shuffled_copies(verified_frames_training, verified_frame_labels_training)
+            verified_frames_training = np.asarray(verified_frames)
+            verified_frames_training, verified_frame_labels_training = shuffle(verified_frames_training, verified_frame_labels_training, random_state=101)
             for i in tqdm.trange(
                     steps_per_epoch,
                     desc='Epoch %d/%d:' % (epoch, cfg['self_verify_epochs'])):
@@ -218,7 +219,7 @@ def main():
 
         # after end of training, store averaged (swa) model
         network.set_weights(swa_weights)
-        network.save('models/{}/{}_fold{}.hd5'.format(cfg['features'], modelfile.replace('.py', '_swa'), fold))
+        network.save('models/{}/{}_fold{}.hd5'.format(cfg['features'], modelfile, fold))
 
 
 if __name__ == '__main__':
