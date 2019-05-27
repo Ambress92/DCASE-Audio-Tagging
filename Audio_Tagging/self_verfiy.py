@@ -207,7 +207,7 @@ def main():
                                 '{}/{}_fold{}_finetuned_lwlrap_curve.pdf'.format(cfg['features'], modelfile,fold),
                                 "Label Weighted Label Ranking Average Precision", 'lwlrap')
 
-            swa_epoch = cfg['epochs'] + 1 - cfg['swa_epochs']
+            swa_epoch = cfg['self_verify_epochs'] + 1 - cfg['swa_epochs']
             if epoch == swa_epoch:
                 # first swa epoch
                 swa_weights = network.get_weights()
