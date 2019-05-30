@@ -32,7 +32,6 @@ def save_learning_curve(metric, val_metric, filename, title, ylabel):
     plt.xlabel('Epoch')
     plt.legend(['train', 'validation'], loc='upper left')
     plt.grid()
-    plt.ylim([0, 1.05])
     plt.savefig('plots/' + filename)
     plt.close()
 
@@ -126,7 +125,7 @@ def main():
             train_batches = generate_in_background(
                 dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True,
                                         features=cfg['features'], feature_width=cfg['feature_width'],
-                                        fixed_length=cfg['fixed_size'], jump=cfg['jump'], mixup=True, augment=False), num_cached=100)
+                                        fixed_length=cfg['fixed_size'], jump=cfg['jump'], mixup=True, augment=False))
             train_noisy_batches = dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True,
                                                           infinite=True, feature_width=cfg['feature_width'],
                                                           features=cfg['features'], mixup=True, augment=False,
@@ -135,8 +134,7 @@ def main():
             train_batches = generate_in_background(
                 dataloader.load_batches(train_files, cfg['batchsize'], shuffle=True, infinite=True,
                                         features=cfg['features'], feature_width=cfg['feature_width'],
-                                        fixed_length=cfg['fixed_size'], jump=cfg['jump'], mixup=False, augment=True),
-                num_cached=100)
+                                        fixed_length=cfg['fixed_size'], jump=cfg['jump'], mixup=False, augment=True))
             train_noisy_batches = dataloader.load_batches(train_files_noisy, cfg['batchsize'], shuffle=True,
                                                           infinite=True, feature_width=cfg['feature_width'],
                                                           features=cfg['features'], mixup=False, augment=True,

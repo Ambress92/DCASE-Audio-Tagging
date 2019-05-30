@@ -27,7 +27,6 @@ def save_learning_curve(metric, filename, title, ylabel):
     plt.xlabel('Epoch')
     plt.legend(['validation'], loc='upper left')
     plt.grid()
-    plt.ylim([0, 1.05])
     plt.savefig('plots/' + filename)
     plt.close()
 
