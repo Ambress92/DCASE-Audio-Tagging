@@ -7,16 +7,18 @@ import numpy as np
 import tqdm
 from scipy.io import wavfile
 
-parser = ArgumentParser()
-parser.add_argument('--test', action='store_true')
-parser.add_argument('--noisy', action='store_true')
-parser.add_argument('--mfcc', action='store_true')
-parser.add_argument('--cqt', action='store_true')
-parser.add_argument('--centroids', action='store_true')
-parser.add_argument('--melspectrogram', action='store_true')
-parser.add_argument('--plot', action='store_true')
-parser.add_argument('--spec_weighting', action='store_true')
-args = parser.parse_args()
+
+def parse_opt():
+    parser = ArgumentParser()
+    parser.add_argument('--test', action='store_true', help='compute features for test data')
+    parser.add_argument('--noisy', action='store_true', help='compute features for noisy data')
+    parser.add_argument('--cqt', action='store_true', help='compute CQT features')
+    parser.add_argument('--melspectrogram', action='store_true', help='compute log-Mel spectrogram features')
+    parser.add_argument('--plot', action='store_true', help='plot computed features maps')
+    parser.add_argument('--spec_weighting', action='store_true', help='apply perceptual weighting to features')
+    args = parser.parse_args()
+
+    return args
 
 
 def plot_spectrogram(spectrogram, title, type):
@@ -33,7 +35,7 @@ def plot_spectrogram(spectrogram, title, type):
     plt.title(title)
     # plt.colorbar()
     plt.tight_layout()
-    plt.gcf().savefig('plots/{}.png'.format(title))
+    plt.gcf().savefig('../plots/{}.png'.format(title))
 
 
 def normalize_features(features):
@@ -41,20 +43,10 @@ def normalize_features(features):
     return normalized_features
 
 
-def dump_cqt_specs(dirname):
-    """
-    Computes constant Q-transform and dumps results into according directory.
-    Parameters
-    ----------
-    use_train : boolean
-        `True` if we want to compute cqt for training audio clips.
-        `False` if we want to compute cqt to test clips.
-    """
-
+def dump_cqt_specs(dirname, args):
     n_bins = 84
-    n_fft = 1024
-    sr = 32000
-    hop_length = 192
+    sr = 44100
+    hop_length = 512
     files = os.listdir('../../datasets/{}'.format(dirname))
 
     for file in tqdm.tqdm(files, 'Extracting stft features'):
@@ -81,14 +73,13 @@ def dump_cqt_specs(dirname):
             freqs = librosa.cqt_frequencies(n_bins, fmin=librosa.note_to_hz('A1'))
             cqt = librosa.perceptual_weighting(cqt ** 2, freqs, ref=np.max)
 
-
         if args.plot:
             sr, orig_data = wavfile.read('../../datasets/{}/{}'.format(dirname, file))
             spec_orig = librosa.cqt(orig_data.astype(np.float), sr=sr, n_bins=84)
             spec_orig = np.abs(spec_orig)
 
             plot_spectrogram(spec_orig, 'Original CQT Spectrogram', 'cqt')
-            plot_spectrogram(spec, 'CQT Spectrogram after silence clipping', 'cqt')
+            plot_spectrogram(cqt, 'CQT Spectrogram after silence clipping', 'cqt')
 
         spec = normalize_features(cqt)
         os.remove('../../datasets/{}/{}'.format(dirname, aug_audio_file))
@@ -108,20 +99,11 @@ def dump_cqt_specs(dirname):
             np.save('../../features/cqt/{}/{}'.format(dirname, file.split('.')[0]), cqt)
 
 
-def dump_mel_specs(dirname):
-    """
-    Computes Mel-scaled spectrogram and dumps results into according directory.
-    Parameters
-    ----------
-    use_train : boolean
-        `True` if we want to compute mel spectrograms for training audio clips.
-        `False` if we want to compute mel spectrograms to test clips.
-    """
-
-    n_fft = 1024
-    sr = 32000
+def dump_mel_specs(dirname, args):
+    n_fft = 2048
+    sr = 44100
     n_mels = 128
-    hop_length = 192
+    hop_length = 512
     fmax = None
 
     files = os.listdir('../../datasets/{}'.format(dirname))
@@ -141,7 +123,7 @@ def dump_mel_specs(dirname):
             data, sr = librosa.load('../../datasets/{}/{}'.format(dirname, file), sr=sr, mono=True)
 
         stft = librosa.stft(data, n_fft=n_fft, hop_length=hop_length, win_length=None, window='hann', center=True,
-                                pad_mode='reflect')
+                            pad_mode='reflect')
 
         # keep only amplitudes of spectrograms
         stft = np.abs(stft)
@@ -155,22 +137,20 @@ def dump_mel_specs(dirname):
         # apply mel filterbank
         spec = librosa.feature.melspectrogram(S=stft, sr=sr, n_mels=n_mels, fmax=fmax)
 
-
         if args.plot:
             orig_data, sr = librosa.load('../../datasets/{}/{}'.format(dirname, file), sr=sr, mono=True)
             stft_orig = librosa.stft(orig_data, n_fft=n_fft, hop_length=hop_length, win_length=None, window='hann', center=True,
-                                pad_mode='reflect')
+                                     pad_mode='reflect')
 
             stft_orig = np.abs(stft_orig)
             stft_orig = np.log10(stft_orig + 1)
-            spec_orig= librosa.feature.melspectrogram(S=stft_orig, sr=sr, n_mels=n_mels, fmax=fmax)
+            spec_orig = librosa.feature.melspectrogram(S=stft_orig, sr=sr, n_mels=n_mels, fmax=fmax)
 
             plot_spectrogram(spec_orig, 'Original Mel Spectrogram', 'mel')
             plot_spectrogram(spec, 'Mel Spectrogram after silence clipping', 'mel')
 
         spec = normalize_features(spec)
         os.remove('../../datasets/{}/{}'.format(dirname, aug_audio_file))
-
 
         if args.plot:
             plot_spectrogram(spec, 'Mel Spectrogram Normalized', 'mel')
@@ -187,65 +167,8 @@ def dump_mel_specs(dirname):
             np.save('../../features/mel/{}/{}'.format(dirname, file.split('.')[0]), spec)
 
 
-def dump_mfcc_features(dirname):
-    """
-    Computes MFCCs and dumps features into according directory.
-    Parameters
-    ----------
-    use_train : boolean
-        `True` if we want to compute mfccs for training audio clips.
-        `False` if we want to compute mfccs to test clips.
-    """
-
-    files = os.listdir('../../datasets/{}'.format(dirname))
-
-    for file in tqdm.tqdm(files, 'Extracting mfccs'):
-        sr, data = wavfile.read('../../datasets/{}/{}'.format(dirname, file))
-
-        try:
-            mfcc = librosa.feature.mfcc(data.astype(np.float), sr, n_mfcc=40)
-        except:
-            print('Extraction failed for file {}'.format(file))
-
-        #deltas = librosa.feature.delta(mfcc)
-        #delta_delta = librosa.feature.delta(mfcc, order=2)
-
-        #mfcc = np.vstack((mfcc, deltas, delta_delta))
-        chunk = int(mfcc.shape[1]/10)
-        mfcc = mfcc[:, :chunk]
-        mfcc = normalize_features(mfcc.T)
-
-        if not os.path.exists('../../features/mfcc/{}'.format(dirname)):
-            os.makedirs('../../features/mfcc/{}'.format(dirname))
-
-        np.save('../../features/mfcc/{}/{}'.format(dirname, file.split('.')[0]), mfcc)
-
-
-def dump_spectral_centroids(dirname):
-    """
-    Computes spectral centroid of audio samples and dumps results
-    into according directory.
-    Parameters
-    ----------
-    use_train : boolean
-        `True` if we want to compute spectral centroids for training audio clips.
-        `False` if we want to compute spectral centroids to test clips.
-    """
-
-    files = os.listdir('../../datasets/{}'.format(dirname))
-
-    for file in tqdm.tqdm(files, 'Extracting spectral centroids'):
-        sr, data = wavfile.read('../../datasets/{}/{}'.format(dirname, file))
-
-        cts = librosa.feature.spectral_centroid(data.astype(np.float), sr)
-
-        if not os.path.exists('../../features/cts/{}'.format(dirname)):
-            os.makedirs('../../features/cts/{}'.format(dirname))
-
-        np.save('../../features/{}/centroids/{}'.format(dirname, file.split('.')[0]), cts.T)
-
-
-def main():
+if __name__ == '__main__':
+    args = parse_opt()
     use_train = not args.test
 
     dirname = 'test'
@@ -255,23 +178,18 @@ def main():
         else:
             dirname = 'train_curated'
 
-    if args.mfcc:
-        if not os.path.exists('../../features/mfcc'):
-            os.makedirs('../../features/mfcc/{}'.format(dirname))
-        dump_mfcc_features(dirname)
+    if args.plot:
+        if not os.path.exists('../plots'):
+            os.makedirs('../plots')
+
     if args.melspectrogram:
         if not os.path.exists('../../features/mel'):
             os.makedirs('../../features/mel/{}'.format(dirname))
-        dump_mel_specs(dirname)
+        dump_mel_specs(dirname, args)
     if args.cqt:
         if not os.path.exists('../../features/cqt'):
             os.makedirs('../../features/cqt/{}'.format(dirname))
-        dump_cqt_specs(dirname)
-    if args.centroids:
-        if not os.path.exists('../../features/centroids'):
-            os.makedirs('../../features/centroids/{}'.format(dirname))
-        dump_spectral_centroids(dirname)
+        dump_cqt_specs(dirname, args)
 
-
-if __name__ == '__main__':
-    main()
+    if not args.cqt and not args.melspectrogram:
+        print('Please define which features you want to extract.')
