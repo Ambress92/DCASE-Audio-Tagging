@@ -65,13 +65,11 @@ def main():
 
     for fold in range(1, 5):
         train_files = []
-        train_files_noisy = []
         eval_files = []
         with open('../datasets/cv/fold{}_curated_train'.format(fold), 'r') as in_file:
             train_files.extend(in_file.readlines())
-        for f in range(1, 5):
-            with open('../datasets/cv/fold{}_noisy_eval'.format(fold), 'r') as in_file:
-                train_files_noisy.extend(in_file.readlines())
+        train_files_noisy = os.listdir('../datasets/train_noisy')
+        train_files_noisy = [d.rstrip() for d in train_files_noisy]
 
         with open('../datasets/cv/fold{}_curated_eval'.format(fold), 'r') as in_file:
             eval_files.extend(in_file.readlines())

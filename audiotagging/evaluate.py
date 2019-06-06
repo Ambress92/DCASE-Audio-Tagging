@@ -228,7 +228,7 @@ def save_lwlrap_results_table(lwlrap, labels, weights, clf, features):
 
 
 def load_preds(file, features):
-    return np.load('predictions/{}/{}'.format(features, file)).item()
+    return np.load('predictions/{}/{}'.format(features, file), allow_pickle=True).item()
 
 
 def make_average_late_fusion(infiles, features, frame=True):
