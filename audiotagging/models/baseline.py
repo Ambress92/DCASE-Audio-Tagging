@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import keras
-from keras.layers import Conv2D, BatchNormalization, GlobalAveragePooling2D, Activation, MaxPooling2D, Dropout, AveragePooling2D, Input, Lambda, Flatten, Dense
-import keras.backend as K
+from keras.layers import Conv2D, BatchNormalization, AveragePooling2D, Input, Flatten, Dense
 
 
 def baseline(data_format, num_classes):
